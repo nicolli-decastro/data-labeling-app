@@ -170,14 +170,18 @@ else:
             label = container2.radio("Is this item likely stolen?", ["Yes", "No"])
 
             if st.button("Submit Label"):
-                idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
-                df.at[idx, 'binary_flag'] = label
-                df.at[idx, 'user_name'] = st.session_state.user_username
-                df.at[idx, 'timestamp'] = datetime.now().isoformat()
-                du.upload_csv(df, sel['drive_file'], sel['drive_folder_id'])
-                df.drop(df.index, inplace=True)  # clear dataframe from memory
-                st.success("Label submitted!")
-                st.rerun()
+              try:
+                  idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
+                  df.at[idx, 'binary_flag'] = label
+                  df.at[idx, 'user_name'] = st.session_state.user_username
+                  df.at[idx, 'timestamp'] = datetime.now().isoformat()
+          
+                  du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])  # use a copy just in case
+                  st.success("Label submitted!")
+                  st.rerun()
+              except Exception as e:
+                  st.error(f"Failed to submit label: {e}")
+
 
         st.divider()
         if st.button("⬅️ Back to Datasets"):
