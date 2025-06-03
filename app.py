@@ -16,13 +16,8 @@ USERS_CSV = 'users.csv'
 # GitHub folder config (dataset folders pushed with the app)
 DATASETS_DIR = os.path.join(os.getcwd(), "Data")
 
-# --- Load Users from Google Drive ---
-users_df = du.download_csv(USERS_CSV, du.get_folder_id_by_name(ROOT_FOLDER_NAME))
-if users_df.empty:
-    st.error("Could not load users.csv from Google Drive.")
-    st.stop()
-
 # --- Login ---
+users_df = None
 if "user_name" not in st.session_state:
     st.title("🔐 Login")
     with st.form("login_form"):
@@ -30,10 +25,21 @@ if "user_name" not in st.session_state:
         password = st.text_input("Password", type="password")
         submit = st.form_submit_button("Login")
         if submit:
+            folder_id = du.get_folder_id_by_name(ROOT_FOLDER_NAME)
+            if not folder_id:
+                st.error("Could not find root folder on Google Drive.")
+                st.stop()
+
+            users_df = du.download_csv(USERS_CSV, folder_id)
+            if users_df.empty:
+                st.error("Could not load users.csv from Google Drive.")
+                st.stop()
+
             match = users_df[(users_df['user_name'] == username) & (users_df['password'] == password)]
             if not match.empty:
                 st.session_state.user_name = match.iloc[0]['name']
                 st.session_state.user_username = username
+                st.session_state.root_folder_id = folder_id
                 st.rerun()
             else:
                 st.error("Invalid credentials")
@@ -69,7 +75,7 @@ else:
                     location = " ".join(location_parts[:-1]).title()
                     range_miles = location_parts[-1]
 
-                    drive_folder_id = du.get_folder_id_by_name(folder_name, parent_id=du.get_folder_id_by_name(ROOT_FOLDER_NAME))
+                    drive_folder_id = du.get_folder_id_by_name(folder_name, parent_id=st.session_state.root_folder_id)
                     labeled_file_id = du.get_file_id_by_name(file, drive_folder_id) if drive_folder_id else None
 
                     if labeled_file_id:
@@ -121,7 +127,7 @@ else:
                                     "drive_folder_id": drive_folder_id
                                 }
                                 st.rerun()
-                    
+
                     # Button logout
                     st.divider()
                     if st.button("🔒 Logout"):
