@@ -70,6 +70,13 @@ else:
                     range_miles = location_parts[-1]
 
                     df = pd.read_csv(csv_path)
+
+                    # Converting floats to strings in dataset for listings
+
+                    df['binary_flag'] = df['binary_flag'].astype(str)
+                    df['user_name'] = df['user_name'].astype(str)
+                    df['timestamp'] = df['timestamp'].astype(str)
+
                     total = len(df)
                     labeled = df['binary_flag'].notna().sum()
                     is_complete = labeled == total
@@ -113,7 +120,8 @@ else:
 
         not_labeled = df[df['binary_flag'].isna()].reset_index(drop=True)
 
-        st.header(f"Dataset: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')}")
+        container1 = st.container(border=True)
+        container1.header(f"Dataset: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')}")
 
         if not_labeled.empty:
             st.info("🎉 All listings have been labeled!")
@@ -123,21 +131,19 @@ else:
             image_path = os.path.join(sel['images_folder'], image_name)
 
             if os.path.exists(image_path):
-                container1 = st.container(border=True)
-                container1.write(f"**Title:** {row['title']}")
-                container1.write(f"**Price:** {row['price']}")
-                container1.write(f"**Location:** {row['location']}")
-                container2 = st.container(border=True)
-                container2.subheader(f"**Listing Image**")
-                container2.image(image_path, use_container_width=False)
-                container2.write(f"**[View Listing]({row['listing_url']})**")
+                container = st.container(border=True)
+                container.subheader(f"**Title:** {row['title']}")
+                container.write(f"**Price:** {row['price']}")
+                container.write(f"**Location:** {row['location']}")
+                container.image(image_path, use_container_width=False)
+                container.write(f"**[View Listing]({row['listing_url']})**")
 
                 label = st.radio("Is this item likely stolen?", ["Yes", "No"])
 
             else:
                 st.warning(f"⚠️ Image not found: {image_name}")
 
-            if st.button("Submit Label"):
+            if st.button("Submit Label", type="primary"):
                 idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
                 df.at[idx, 'binary_flag'] = label
                 df.at[idx, 'user_name'] = st.session_state.user_username
