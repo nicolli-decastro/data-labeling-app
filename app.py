@@ -45,7 +45,7 @@ else:
 
         st.subheader("📋 Datasets")
         header_cols = st.columns([2, 1, 2, 1, 1, 2])
-        headers = ["City", "Range", "Date", "Total", "Labeled", "Action"]
+        headers = ["City", "Range", "Date", "Labeled", "Total", "Action"]
         for col, label in zip(header_cols, headers):
             col.markdown(f"**{label}**")
 
@@ -86,8 +86,8 @@ else:
                     with col1: st.write(location)
                     with col2: st.write(range_miles)
                     with col3: st.write(folder_name.replace("_", "/"))
-                    with col4: st.write(total)
-                    with col5: st.write(labeled)
+                    with col4: st.write(labeled)
+                    with col5: st.write(total)
                     with col6:
                         key = f"select_{folder_name}_{file}"
                         if is_complete:
@@ -141,7 +141,7 @@ else:
         not_labeled = df[df['binary_flag'].isna()].reset_index(drop=True)
 
         # Dataset Title
-        st.header(f"Dataset: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')} ")
+        st.subheader(f"Dataset: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')} ")
 
         if not_labeled.empty:
             st.info("🎉 All listings have been labeled!")
@@ -152,7 +152,7 @@ else:
 
             if os.path.exists(image_path):
                 container1 = st.container(border=True)
-                container1.header(f"**Title:** {row['title']}")  
+                container1.subheader(f"{row['title']}")  
                 container1.write(f"**Price:** {row['price']}")
                 container1.write(f"**Location:** {row['location']}")
                 container1.image(image_path, use_container_width=True)
