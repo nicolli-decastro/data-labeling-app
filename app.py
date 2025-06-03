@@ -152,14 +152,16 @@ else:
                 df.to_csv(sel['csv_path'], index=False)
                 st.success("Label submitted!")
                 st.rerun()
+            
+            st.divider()
 
-    st.divider()
+            if st.button("⬅️ Back to Datasets"):
+                    del st.session_state.selected_dataset
+                    st.rerun()
 
-    if st.button("⬅️ Back to Datasets"):
-            del st.session_state.selected_dataset
-            st.rerun()
+            if st.button("🔒 Logout", key="logout_button_bottom"):
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                st.rerun()
 
-    if st.button("🔒 Logout", key="logout_button_bottom"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+    
