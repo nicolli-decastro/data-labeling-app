@@ -7,6 +7,8 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 import streamlit as st
 import json
+import time
+from googleapiclient.errors import HttpError
 
 # --- Setup credentials from Streamlit secrets ---
 creds_dict = json.loads(st.secrets["GDRIVE_KEY"])
@@ -15,13 +17,29 @@ credentials = service_account.Credentials.from_service_account_info(creds_dict, 
 drive_service = build('drive', 'v3', credentials=credentials)
 
 # --- Helper Functions ---
-def get_folder_id_by_name(name, parent_id=None):
-    query = f"mimeType='application/vnd.google-apps.folder' and name='{name}'"
+def get_folder_id_by_name(folder_name, parent_id=None, retries=3, delay=2):
+    query = f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'"
     if parent_id:
         query += f" and '{parent_id}' in parents"
-    results = drive_service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
-    folders = results.get('files', [])
-    return folders[0]['id'] if folders else None
+
+    for attempt in range(retries):
+        try:
+            results = drive_service.files().list(
+                q=query,
+                spaces='drive',
+                fields='files(id, name)'
+            ).execute()
+
+            if isinstance(results, dict):
+                folders = results.get('files', [])
+                return folders[0]['id'] if folders else None
+            else:
+                print(f"[Attempt {attempt + 1}] Unexpected type: {type(results)} – {results}")
+        except Exception as e:
+            print(f"[Attempt {attempt + 1}] Error in get_folder_id_by_name: {e}")
+        time.sleep(delay)
+
+    return None
 
 def create_drive_folder(folder_name, parent_id):
     file_metadata = {
