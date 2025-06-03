@@ -103,7 +103,7 @@ else:
                         elif labeled_df.empty:
                             if st.button("🚀 Start Labeling", key=key):
                                 if not drive_folder_id:
-                                    drive_folder_id = du.create_folder(folder_name, du.get_folder_id_by_name(ROOT_FOLDER_NAME))
+                                    drive_folder_id = du.create_drive_folder(folder_name, du.get_folder_id_by_name(ROOT_FOLDER_NAME))
                                 df_original[['listing_url', 'photo_url', 'price', 'title', 'location', 'origin_city_list']].assign(
                                     user_name='', binary_flag='', timestamp='').to_csv("temp.csv", index=False)
                                 du.upload_csv(pd.read_csv("temp.csv"), file, drive_folder_id)
