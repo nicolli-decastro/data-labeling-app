@@ -169,19 +169,38 @@ else:
             container2 = st.container(border=True)
             label = container2.radio("Is this item likely stolen?", ["Yes", "No"])
 
-            if st.button("Submit Label"):
-              try:
-                  idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
-                  df.at[idx, 'binary_flag'] = label
-                  df.at[idx, 'user_name'] = st.session_state.user_username
-                  df.at[idx, 'timestamp'] = datetime.now().isoformat()
-          
-                  du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])  # use a copy just in case
-                  st.success("Label submitted!")
-                  st.rerun()
-              except Exception as e:
-                  st.error(f"Failed to submit label: {e}")
+            # Initialize in session if not already stored
+            if "current_df" not in st.session_state:
+                st.session_state.current_df = df.copy()
+            
+            # Replace df with session copy
+            df = st.session_state.current_df
+            
+            if st.button("Next Listing"):
+                try:
+                    idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
+                    df.at[idx, 'binary_flag'] = str(label)
+                    df.at[idx, 'user_name'] = str(st.session_state.user_username)
+                    df.at[idx, 'timestamp'] = datetime.now().isoformat()
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {e}")
 
+            st.divider()
+            if labeled < total:
+                if st.button("💾 Save Progress"):
+                    try:
+                        du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                        st.success("Progress saved to Google Drive!")
+                    except Exception as e:
+                        st.error(f"Failed to upload: {e}")
+            else:
+                if st.button("📤 Submit All Labels"):
+                    try:
+                        du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                        st.success("All labels submitted successfully!")
+                    except Exception as e:
+                        st.error(f"Failed to submit labels: {e}")
 
         st.divider()
         if st.button("⬅️ Back to Datasets"):
