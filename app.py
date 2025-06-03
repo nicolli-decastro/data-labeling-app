@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 import drive_utils as du
 
-st.set_page_config(page_title="Stolen Items Labeling App", layout="wide")
+st.set_page_config(page_title="Stolen Items Labeling App", layout="centered")
 
 # Google Drive config
 ROOT_FOLDER_NAME = 'LabelingAppData'
@@ -15,14 +15,6 @@ USERS_CSV = 'users.csv'
 
 # GitHub folder config (dataset folders pushed with the app)
 DATASETS_DIR = os.path.join(os.getcwd(), "Data")
-
-# --- Print working directory and files (for debugging) ---
-st.code(f"Working directory: {DATASETS_DIR}")
-try:
-    files = os.listdir(DATASETS_DIR)
-    st.code("Files in 'Data':\n" + "\n".join(files))
-except Exception as e:
-    st.error(f"Could not list files in Data directory: {e}")
 
 # --- Load Users from Google Drive ---
 users_df = du.download_csv(USERS_CSV, du.get_folder_id_by_name(ROOT_FOLDER_NAME))
@@ -53,7 +45,7 @@ else:
 
         st.subheader("📋 Datasets")
         header_cols = st.columns([2, 1, 2, 1, 1, 2])
-        headers = ["City", "Range", "Date", "Total", "Labeled", "Action"]
+        headers = ["City", "Range", "Date", "Labeled", "Total", "Action"]
         for col, label in zip(header_cols, headers):
             col.markdown(f"**{label}**")
 
@@ -86,8 +78,8 @@ else:
                     with col1: st.write(location)
                     with col2: st.write(range_miles)
                     with col3: st.write(folder_name.replace("_", "/"))
-                    with col4: st.write(total)
-                    with col5: st.write(labeled)
+                    with col4: st.write(labeled)
+                    with col5: st.write(total)
                     with col6:
                         key = f"select_{folder_name}_{file}"
                         if is_complete:
@@ -102,10 +94,19 @@ else:
                                     "range": range_miles
                                 }
                                 st.rerun()
+                    
+                    st.divider()
+                    if st.button("🔒 Logout"):
+                        for key in list(st.session_state.keys()):
+                            del st.session_state[key]
+                        st.rerun()
+
 
     else:
         sel = st.session_state.selected_dataset
-        st.title(f"📦 Labeling: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')} ")
+        st.title(f"📦 Labeling App")
+
+        st.header(f"Label: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')}")
 
         df = pd.read_csv(sel['csv_path'])
         total = len(df)
@@ -122,16 +123,16 @@ else:
             image_path = os.path.join(sel['images_folder'], image_name)
 
             if os.path.exists(image_path):
-                st.image(image_path, use_container_width=True)
+                st.markdown(f"**Title:** {row['title']}")
+                st.markdown(f"**Price:** {row['price']}")
+                st.markdown(f"**Location:** {row['location']}")
+                st.image(image_path, use_container_width=False)
+                st.markdown(f"**[View Listing]({row['listing_url']})**")
+
+                label = st.radio("Is this item likely stolen?", ["Yes", "No"])
+
             else:
                 st.warning(f"⚠️ Image not found: {image_name}")
-
-            st.markdown(f"**Title:** {row['title']}")
-            st.markdown(f"**Price:** {row['price']}")
-            st.markdown(f"**Location:** {row['location']}")
-            st.markdown(f"**[View Listing]({row['listing_url']})**")
-
-            label = st.radio("Is this item likely stolen?", ["Yes", "No"])
 
             if st.button("Submit Label"):
                 idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
@@ -142,12 +143,12 @@ else:
                 st.success("Label submitted!")
                 st.rerun()
 
-        st.divider()
-        if st.button("⬅️ Back to Datasets"):
+    st.divider()
+
+    if st.button("⬅️ Back to Datasets"):
             del st.session_state.selected_dataset
             st.rerun()
 
-    st.divider()
     if st.button("🔒 Logout"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
