@@ -127,12 +127,13 @@ else:
         if not_labeled.empty:
             st.info("🎉 All listings have been labeled!")
 
-            st.divider()
+            # ✅ Clear DataFrame from memory
+            del df
 
+            st.divider()
             if st.button("⬅️ Back to Datasets"):
                     del st.session_state.selected_dataset
                     st.rerun()
-
             if st.button("🔒 Logout", key="logout_button_bottom"):
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
@@ -164,6 +165,9 @@ else:
 
                 # ✅ Write changes back to the original file
                 df.to_csv(sel['csv_path'], index=False)
+
+                # ✅ Clear DataFrame from memory
+                del df
 
                 st.success("Label submitted!")
                 st.rerun()
