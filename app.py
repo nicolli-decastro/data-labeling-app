@@ -106,14 +106,14 @@ else:
         sel = st.session_state.selected_dataset
         st.title(f"📦 Labeling App")
 
-        st.header(f"Label: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')}")
-
         df = pd.read_csv(sel['csv_path'])
         total = len(df)
         labeled = df['binary_flag'].notna().sum()
         st.progress(labeled / total if total else 0, text=f"{labeled} out of {total} listings labeled")
 
         not_labeled = df[df['binary_flag'].isna()].reset_index(drop=True)
+
+        st.header(f"Dataset: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')}")
 
         if not_labeled.empty:
             st.info("🎉 All listings have been labeled!")
@@ -123,10 +123,13 @@ else:
             image_path = os.path.join(sel['images_folder'], image_name)
 
             if os.path.exists(image_path):
-                st.markdown(f"**Title:** {row['title']}")
-                st.markdown(f"**Price:** {row['price']}")
-                st.markdown(f"**Location:** {row['location']}")
-                st.image(image_path, use_container_width=False)
+                container1 = st.container(border=True)
+                container1.write(f"**Title:** {row['title']}")
+                container1.write(f"**Price:** {row['price']}")
+                container1.write(f"**Location:** {row['location']}")
+                container2 = st.container(border=True)
+                container2.write(f"**Listing Image:**")
+                container2.image(image_path, use_container_width=False)
                 st.markdown(f"**[View Listing]({row['listing_url']})**")
 
                 label = st.radio("Is this item likely stolen?", ["Yes", "No"])
