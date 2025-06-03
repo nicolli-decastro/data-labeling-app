@@ -97,7 +97,7 @@ else:
                                 st.rerun()
                     
                     st.divider()
-                    if st.button("🔒 Logout"):
+                    if st.button("🔒 Logout", key="logout_button_top"):
                         for key in list(st.session_state.keys()):
                             del st.session_state[key]
                         st.rerun()
@@ -159,7 +159,7 @@ else:
             del st.session_state.selected_dataset
             st.rerun()
 
-    if st.button("🔒 Logout"):
+    if st.button("🔒 Logout", key="logout_button_bottom"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
