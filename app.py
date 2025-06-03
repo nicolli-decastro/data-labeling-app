@@ -144,7 +144,7 @@ else:
             else:
                 st.warning(f"⚠️ Image not found: {image_name}")
 
-            if st.button("Submit Label", type="primary"):
+            if st.button("Submit Label"):
                 idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
                 df.at[idx, 'binary_flag'] = label
                 df.at[idx, 'user_name'] = st.session_state.user_username
