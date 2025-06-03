@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 import drive_utils as du
 
-st.set_page_config(page_title="Stolen Items Labeling App", layout="wide")
+st.set_page_config(page_title="Stolen Items Labeling App", layout="centered")
 
 # Google Drive config
 ROOT_FOLDER_NAME = 'LabelingAppData'
@@ -15,14 +15,6 @@ USERS_CSV = 'users.csv'
 
 # GitHub folder config (dataset folders pushed with the app)
 DATASETS_DIR = os.path.join(os.getcwd(), "Data")
-
-# --- Print working directory and files (for debugging) ---
-st.code(f"Working directory: {DATASETS_DIR}")
-try:
-    files = os.listdir(DATASETS_DIR)
-    st.code("Files in 'Data':\n" + "\n".join(files))
-except Exception as e:
-    st.error(f"Could not list files in Data directory: {e}")
 
 # --- Load Users from Google Drive ---
 users_df = du.download_csv(USERS_CSV, du.get_folder_id_by_name(ROOT_FOLDER_NAME))
@@ -129,10 +121,17 @@ else:
                                     "drive_folder_id": drive_folder_id
                                 }
                                 st.rerun()
+                    
+                    # Button logout
+                    st.divider()
+                    if st.button("🔒 Logout"):
+                        for key in list(st.session_state.keys()):
+                            del st.session_state[key]
+                        st.rerun()
 
     else:
         sel = st.session_state.selected_dataset
-        st.title(f"📦 Labeling: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')} ")
+        st.title(f"📦 Labeling App")
 
         df = du.download_csv(sel['drive_file'], sel['drive_folder_id'])
         total = len(df)
@@ -140,6 +139,9 @@ else:
         st.progress(labeled / total if total else 0, text=f"{labeled} out of {total} listings labeled")
 
         not_labeled = df[df['binary_flag'].isna()].reset_index(drop=True)
+
+        # Dataset Title
+        st.header(f"Dataset: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')} ")
 
         if not_labeled.empty:
             st.info("🎉 All listings have been labeled!")
@@ -149,16 +151,17 @@ else:
             image_path = os.path.join(sel['images_folder'], image_name)
 
             if os.path.exists(image_path):
-                st.image(image_path, use_container_width=True)
+                container1 = st.container(border=True)
+                container1.header(f"**Title:** {row['title']}")  
+                container1.write(f"**Price:** {row['price']}")
+                container1.write(f"**Location:** {row['location']}")
+                container1.image(image_path, use_container_width=True)
+                container1.write(f"**[View Listing]({row['listing_url']})**")
             else:
                 st.warning(f"⚠️ Image not found: {image_name}")
 
-            st.markdown(f"**Title:** {row['title']}")
-            st.markdown(f"**Price:** {row['price']}")
-            st.markdown(f"**Location:** {row['location']}")
-            st.markdown(f"**[View Listing]({row['listing_url']})**")
-
-            label = st.radio("Is this item likely stolen?", ["Yes", "No"])
+            container2 = st.container(border=True)
+            label = container2.radio("Is this item likely stolen?", ["Yes", "No"])
 
             if st.button("Submit Label"):
                 idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
@@ -175,8 +178,7 @@ else:
             del st.session_state.selected_dataset
             st.rerun()
 
-    st.divider()
-    if st.button("🔒 Logout"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+        if st.button("🔒 Logout"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
