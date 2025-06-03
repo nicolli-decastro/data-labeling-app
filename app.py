@@ -14,7 +14,15 @@ ROOT_FOLDER_NAME = 'LabelingAppData'
 USERS_CSV = 'users.csv'
 
 # GitHub folder config (dataset folders pushed with the app)
-DATASETS_BASE_DIR = os.getcwd()
+DATASETS_DIR = os.path.join(os.getcwd(), "Data")
+
+# --- Print working directory and files (for debugging) ---
+st.code(f"Working directory: {DATASETS_DIR}")
+try:
+    files = os.listdir(DATASETS_DIR)
+    st.code("Files in 'Data':\n" + "\n".join(files))
+except Exception as e:
+    st.error(f"Could not list files in Data directory: {e}")
 
 # --- Load Users from Google Drive ---
 users_df = du.download_csv(USERS_CSV, du.get_folder_id_by_name(ROOT_FOLDER_NAME))
@@ -49,48 +57,51 @@ else:
         for col, label in zip(header_cols, headers):
             col.markdown(f"**{label}**")
 
-        for folder_name in sorted(os.listdir(DATASETS_BASE_DIR), reverse=True):
-            folder_path = os.path.join(DATASETS_BASE_DIR, folder_name)
-            if not os.path.isdir(folder_path):
-                continue
-            if not re.match(r"20\\d{2}_\\d{2}_\\d{2}$", folder_name):
-                continue
-
-            for file in os.listdir(folder_path):
-                if not file.endswith(".csv"):
+        if os.path.exists(DATASETS_DIR):
+            for folder_name in sorted(os.listdir(DATASETS_DIR), reverse=True):
+                if not folder_name.startswith("20"):
                     continue
-                csv_path = os.path.join(folder_path, file)
-                images_folder = os.path.join(folder_path, file.replace(".csv", "_files"))
 
-                location_parts = file.replace(".csv", "").split("_")
-                location = " ".join(location_parts[:-1]).title()
-                range_miles = location_parts[-1]
+                folder_path = os.path.join(DATASETS_DIR, folder_name)
+                if not os.path.isdir(folder_path):
+                    continue
 
-                df = pd.read_csv(csv_path)
-                total = len(df)
-                labeled = df['binary_flag'].notna().sum()
-                is_complete = labeled == total
+                for file in os.listdir(folder_path):
+                    if not file.endswith(".csv"):
+                        continue
 
-                col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 2])
-                with col1: st.write(location)
-                with col2: st.write(range_miles)
-                with col3: st.write(folder_name.replace("_", "/"))
-                with col4: st.write(total)
-                with col5: st.write(labeled)
-                with col6:
-                    key = f"select_{folder_name}_{file}"
-                    if is_complete:
-                        st.button("✅ Complete", key=key, disabled=True)
-                    else:
-                        if st.button("🔘 Label dataset", key=key):
-                            st.session_state.selected_dataset = {
-                                "csv_path": csv_path,
-                                "images_folder": images_folder,
-                                "folder_name": folder_name,
-                                "location": location,
-                                "range": range_miles
-                            }
-                            st.rerun()
+                    csv_path = os.path.join(folder_path, file)
+                    images_folder = os.path.join(folder_path, file.replace(".csv", "_files"))
+
+                    location_parts = file.replace(".csv", "").split("_")
+                    location = " ".join(location_parts[:-1]).title()
+                    range_miles = location_parts[-1]
+
+                    df = pd.read_csv(csv_path)
+                    total = len(df)
+                    labeled = df['binary_flag'].notna().sum()
+                    is_complete = labeled == total
+
+                    col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 2])
+                    with col1: st.write(location)
+                    with col2: st.write(range_miles)
+                    with col3: st.write(folder_name.replace("_", "/"))
+                    with col4: st.write(total)
+                    with col5: st.write(labeled)
+                    with col6:
+                        key = f"select_{folder_name}_{file}"
+                        if is_complete:
+                            st.button("✅ Complete", key=key, disabled=True)
+                        else:
+                            if st.button("🔘 Label dataset", key=key):
+                                st.session_state.selected_dataset = {
+                                    "csv_path": csv_path,
+                                    "images_folder": images_folder,
+                                    "folder_name": folder_name,
+                                    "location": location,
+                                    "range": range_miles
+                                }
+                                st.rerun()
 
     else:
         sel = st.session_state.selected_dataset
