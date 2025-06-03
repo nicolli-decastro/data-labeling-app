@@ -128,9 +128,9 @@ else:
                 container1.write(f"**Price:** {row['price']}")
                 container1.write(f"**Location:** {row['location']}")
                 container2 = st.container(border=True)
-                container2.write(f"**Listing Image:**")
+                container2.subheader(f"**Listing Image**")
                 container2.image(image_path, use_container_width=False)
-                st.markdown(f"**[View Listing]({row['listing_url']})**")
+                container2.write(f"**[View Listing]({row['listing_url']})**")
 
                 label = st.radio("Is this item likely stolen?", ["Yes", "No"])
 
