@@ -144,15 +144,18 @@ else:
             else:
                 st.warning(f"⚠️ Image not found: {image_name}")
 
-            if st.button("Submit Label"):
+            if st.button("Submit Label", type="primary"):
                 idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
                 df.at[idx, 'binary_flag'] = label
                 df.at[idx, 'user_name'] = st.session_state.user_username
                 df.at[idx, 'timestamp'] = datetime.now().isoformat()
+
+                # ✅ Write changes back to the original file
                 df.to_csv(sel['csv_path'], index=False)
+
                 st.success("Label submitted!")
                 st.rerun()
-            
+
             st.divider()
 
             if st.button("⬅️ Back to Datasets"):
