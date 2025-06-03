@@ -16,6 +16,17 @@ USERS_CSV = 'users.csv'
 # GitHub folder config (dataset folders pushed with the app)
 DATASETS_DIR = os.path.join(os.getcwd(), "Data")
 
+def save_all_progress():
+    for key in list(st.session_state.keys()):
+        if key.startswith("local_df_"):
+            filename = key.replace("local_df_", "")
+            dataset = st.session_state[key]
+            folder_id = st.session_state.root_folder_id
+            subfolder_name = filename.replace(".csv", "").split("_")[0]
+            subfolder_id = du.get_folder_id_by_name(subfolder_name, parent_id=folder_id)
+            if subfolder_id:
+                du.upload_csv(dataset, filename, subfolder_id)
+
 # --- Login ---
 users_df = None
 if "user_name" not in st.session_state:
@@ -85,7 +96,13 @@ else:
 
                     df_original = pd.read_csv(csv_path)
                     total = len(df_original)
-                    labeled = labeled_df['binary_flag'].notna().sum() if not labeled_df.empty else 0
+
+                    local_key = f"local_df_{file}"
+                    if local_key in st.session_state:
+                        labeled = st.session_state[local_key]['binary_flag'].notna().sum()
+                    else:
+                        labeled = labeled_df['binary_flag'].notna().sum() if not labeled_df.empty else 0
+
                     is_complete = labeled == total
 
                     col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 2])
@@ -128,12 +145,12 @@ else:
                                 }
                                 st.rerun()
 
-                    # Button logout
-                    st.divider()
-                    if st.button("🔒 Logout"):
-                        for key in list(st.session_state.keys()):
-                            del st.session_state[key]
-                        st.rerun()
+        st.divider()
+        if st.button("🔒 Logout"):
+            save_all_progress()
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
 
     else:
         sel = st.session_state.selected_dataset
@@ -218,3 +235,4 @@ else:
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
+
