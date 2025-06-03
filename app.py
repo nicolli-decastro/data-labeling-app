@@ -98,11 +98,15 @@ else:
                     total = len(df_original)
 
                     local_key = f"local_df_{file}"
-                    if local_key in st.session_state:
-                        labeled = st.session_state[local_key]['binary_flag'].notna().sum()
-                    else:
-                        labeled = labeled_df['binary_flag'].notna().sum() if not labeled_df.empty else 0
+                    if local_key not in st.session_state:
+                        if labeled_df.empty:
+                            df = df_original.copy()
+                            df[['user_name', 'binary_flag', 'timestamp']] = ''
+                            st.session_state[local_key] = df
+                        else:
+                            st.session_state[local_key] = labeled_df.copy()
 
+                    labeled = st.session_state[local_key]['binary_flag'].notna().sum()
                     is_complete = labeled == total
 
                     col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 2])
@@ -115,23 +119,6 @@ else:
                         key = f"select_{folder_name}_{file}"
                         if is_complete:
                             st.button("✅ Complete", key=key, disabled=True)
-                        elif labeled_df.empty:
-                            if st.button("🚀 Start Labeling", key=key):
-                                if not drive_folder_id:
-                                    drive_folder_id = du.create_drive_folder(folder_name, drive_folder_id)
-                                df_original[['listing_url', 'photo_url', 'price', 'title', 'location', 'origin_city_list']].assign(
-                                    user_name='', binary_flag='', timestamp='').to_csv("temp.csv", index=False)
-                                du.upload_csv(pd.read_csv("temp.csv"), file, drive_folder_id)
-                                st.session_state.selected_dataset = {
-                                    "csv_path": csv_path,
-                                    "images_folder": images_folder,
-                                    "folder_name": folder_name,
-                                    "location": location,
-                                    "range": range_miles,
-                                    "drive_file": file,
-                                    "drive_folder_id": drive_folder_id
-                                }
-                                st.rerun()
                         else:
                             if st.button("🔘 Continue Labeling", key=key):
                                 st.session_state.selected_dataset = {
@@ -143,6 +130,7 @@ else:
                                     "drive_file": file,
                                     "drive_folder_id": drive_folder_id
                                 }
+                                st.session_state.current_df = st.session_state[local_key]
                                 st.rerun()
 
         st.divider()
