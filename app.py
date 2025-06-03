@@ -95,10 +95,10 @@ else:
                         elif labeled_df.empty:
                             if st.button("🚀 Start Labeling", key=key):
                                 if not drive_folder_id:
-                                    drive_folder_id = du.create_drive_folder(folder_name, du.get_folder_id_by_name(ROOT_FOLDER_NAME))
+                                    new_drive_folder_id = du.create_drive_folder(folder_name, drive_folder_id)
                                 df_original[['listing_url', 'photo_url', 'price', 'title', 'location', 'origin_city_list']].assign(
                                     user_name='', binary_flag='', timestamp='').to_csv("temp.csv", index=False)
-                                du.upload_csv(pd.read_csv("temp.csv"), file, drive_folder_id)
+                                du.upload_csv(pd.read_csv("temp.csv"), file, new_drive_folder_id)
                                 st.session_state.selected_dataset = {
                                     "csv_path": csv_path,
                                     "images_folder": images_folder,
@@ -106,7 +106,7 @@ else:
                                     "location": location,
                                     "range": range_miles,
                                     "drive_file": file,
-                                    "drive_folder_id": drive_folder_id
+                                    "drive_folder_id": new_drive_folder_id
                                 }
                                 st.rerun()
                         else:
@@ -155,7 +155,7 @@ else:
                 container1.subheader(f"{row['title']}")  
                 container1.write(f"**Price:** {row['price']}")
                 container1.write(f"**Location:** {row['location']}")
-                container1.image(image_path, use_container_width=True)
+                container1.image(image_path, use_container_width=False)
                 container1.write(f"**[View Listing]({row['listing_url']})**")
             else:
                 st.warning(f"⚠️ Image not found: {image_name}")
