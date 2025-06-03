@@ -71,12 +71,6 @@ else:
 
                     df = pd.read_csv(csv_path)
 
-                    # Converting floats to strings in dataset for listings
-
-                    df['binary_flag'] = df['binary_flag'].astype(str)
-                    df['user_name'] = df['user_name'].astype(str)
-                    df['timestamp'] = df['timestamp'].astype(str)
-
                     total = len(df)
                     labeled = df['binary_flag'].notna().sum()
                     is_complete = labeled == total
@@ -114,6 +108,13 @@ else:
         st.title(f"📦 Labeling App")
 
         df = pd.read_csv(sel['csv_path'])
+
+        # Converting floats to strings in dataset for listings
+
+        df['binary_flag'] = df['binary_flag'].astype(str)
+        df['user_name'] = df['user_name'].astype(str)
+        df['timestamp'] = df['timestamp'].astype(str)
+
         total = len(df)
         labeled = df['binary_flag'].notna().sum()
         st.progress(labeled / total if total else 0, text=f"{labeled} out of {total} listings labeled")
