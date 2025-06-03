@@ -23,6 +23,14 @@ def get_folder_id_by_name(name, parent_id=None):
     folders = results.get('files', [])
     return folders[0]['id'] if folders else None
 
+def create_drive_folder(folder_name, parent_id):
+    file_metadata = {
+        'name': folder_name,
+        'mimeType': 'application/vnd.google-apps.folder',
+        'parents': [parent_id]
+    }
+    folder = drive_service.files().create(body=file_metadata, fields='id').execute()
+    return folder.get('id')
 
 def list_date_folders():
     root_id = get_folder_id_by_name("LabelingAppData")
@@ -32,19 +40,16 @@ def list_date_folders():
     ).execute()
     return sorted(results.get('files', []), key=lambda x: x['name'], reverse=True)
 
-
 def list_csvs_in_folder(folder_id):
     query = f"'{folder_id}' in parents and name contains '.csv'"
     results = drive_service.files().list(q=query, fields="files(id, name)").execute()
     return results.get('files', [])
-
 
 def get_file_id_by_name(name, folder_id):
     query = f"name='{name}' and '{folder_id}' in parents"
     results = drive_service.files().list(q=query, fields="files(id, name)").execute()
     files = results.get('files', [])
     return files[0]['id'] if files else None
-
 
 def download_csv(file_name, folder_id):
     file_id = get_file_id_by_name(file_name, folder_id)
@@ -62,7 +67,6 @@ def download_csv(file_name, folder_id):
     except Exception:
         return pd.DataFrame()
 
-
 def upload_csv(df, file_name, folder_id):
     # Check if file exists
     file_id = get_file_id_by_name(file_name, folder_id)
@@ -76,7 +80,6 @@ def upload_csv(df, file_name, folder_id):
             body={'name': file_name, 'parents': [folder_id]},
             media_body=media
         ).execute()
-
 
 def get_image_file_id(image_name, image_folder_id):
     if pd.isna(image_name):
