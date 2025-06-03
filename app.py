@@ -139,9 +139,13 @@ else:
         sel = st.session_state.selected_dataset
         st.title(f"📦 Labeling App")
 
-        df = du.download_csv(sel['drive_file'], sel['drive_folder_id'])
+        if "current_df" not in st.session_state:
+          st.session_state.current_df = du.download_csv(sel['drive_file'], sel['drive_folder_id'])
+    
+        df = st.session_state.current_df
         total = len(df)
         labeled = df['binary_flag'].notna().sum()
+
         st.progress(labeled / total if total else 0, text=f"{labeled} out of {total} listings labeled")
 
         not_labeled = df[df['binary_flag'].isna()].reset_index(drop=True)
