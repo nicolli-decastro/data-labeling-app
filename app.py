@@ -155,6 +155,12 @@ else:
 
         if not_labeled.empty:
             st.info("🎉 All listings have been labeled!")
+            if st.button("📤 Submit All Labels"):
+              try:
+                  du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                  st.success("All labels submitted successfully!")
+              except Exception as e:
+                  st.error(f"Failed to submit labels: {e}")
         else:
             row = not_labeled.iloc[0]
             image_name = os.path.basename(row['photo_url'])
@@ -199,6 +205,7 @@ else:
                     except Exception as e:
                         st.error(f"Failed to upload: {e}")
             else:
+                st.info("🎉 All listings have been labeled!")
                 if st.button("📤 Submit All Labels"):
                     try:
                         du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
