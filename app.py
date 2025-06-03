@@ -154,13 +154,11 @@ else:
         st.subheader(f"Dataset: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')} ")
 
         if not_labeled.empty:
-            st.info("🎉 All listings have been labeled!")
-            if st.button("📤 Submit All Labels"):
-              try:
-                  du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
-                  st.success("All labels submitted successfully!")
-              except Exception as e:
-                  st.error(f"Failed to submit labels: {e}")
+            try:
+              du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+              st.success("🎉 All listings have been labeled and uploaded to the drive successfully!")
+            except Exception as e:
+              st.error(f"Failed to submit labels: {e}")
         else:
             row = not_labeled.iloc[0]
             image_name = os.path.basename(row['photo_url'])
@@ -205,13 +203,11 @@ else:
                     except Exception as e:
                         st.error(f"Failed to upload: {e}")
             else:
-                st.info("🎉 All listings have been labeled!")
-                if st.button("📤 Submit All Labels"):
-                    try:
-                        du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
-                        st.success("All labels submitted successfully!")
-                    except Exception as e:
-                        st.error(f"Failed to submit labels: {e}")
+                try:
+                  du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                  st.success("🎉 All listings have been labeled and uploaded to the drive successfully!")
+                except Exception as e:
+                  st.error(f"Failed to submit labels: {e}")
 
         st.divider()
         if st.button("⬅️ Back to Datasets"):
