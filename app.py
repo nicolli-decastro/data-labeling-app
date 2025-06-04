@@ -126,7 +126,7 @@ else:
                     labeled = df_local['binary_flag'].notna().sum() if 'binary_flag' in df_local.columns else 0
                     is_complete = labeled == total and total > 0
 
-                    col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 2])
+                    col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 1, 1, 1, 3])
                     with col1: st.write(location)
                     with col2: st.write(range_miles)
                     with col3: st.write(folder_name.replace("_", "/"))
@@ -206,15 +206,21 @@ else:
             # Replace df with session copy
             df = st.session_state.current_df
             
-            if st.button("Next Listing"):
+            if st.button("Submit Label"):
                 try:
                     idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
                     df.at[idx, 'binary_flag'] = str(label)
                     df.at[idx, 'user_name'] = str(st.session_state.user_username)
                     df.at[idx, 'timestamp'] = datetime.now().isoformat()
-                    st.rerun()
+                    st.button("Next Listing", disabled=False)
+
+                    if st.button("Next Listing"):
+                        st.rerun()
+
                 except Exception as e:
                     st.error(f"Error: {e}")
+
+            st.button("Next Listing", disabled=True)
 
             st.divider()
             if labeled < total:
