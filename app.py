@@ -71,7 +71,7 @@ else:
         is_complete = False
 
         st.subheader("📋 Datasets")
-        header_cols = st.columns([2, 1, 2, 1, 1, 2])
+        header_cols = st.columns([2, 1, 2, 1, 1, 3])
         headers = ["City", "Range", "Date", "Labeled", "Total", "Action"]
         for col, label in zip(header_cols, headers):
             col.markdown(f"**{label}**")
@@ -126,7 +126,7 @@ else:
                     labeled = df_local['binary_flag'].notna().sum() if 'binary_flag' in df_local.columns else 0
                     is_complete = labeled == total and total > 0
 
-                    col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 1, 1, 1, 3])
+                    col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 3])
                     with col1: st.write(location)
                     with col2: st.write(range_miles)
                     with col3: st.write(folder_name.replace("_", "/"))
