@@ -57,6 +57,7 @@ if "user_name" not in st.session_state:
                 st.session_state.user_name = match.iloc[0]['name']
                 st.session_state.user_username = username
                 st.session_state.root_folder_id = folder_id
+                reset_local_dataframes()
                 st.rerun()
             else:
                 st.error("Invalid credentials")
@@ -99,21 +100,19 @@ else:
 
                     if labeled_file_id:
                         labeled_df = du.download_csv(file, drive_folder_id)
+                        local_key = f"local_df_{file}"
+                        st.session_state[local_key] = labeled_df.copy()
                     else:
                         labeled_df = pd.DataFrame()
-
-                    df_original = pd.read_csv(csv_path)
-                    total = len(df_original)
-
-                    local_key = f"local_df_{file}"
-                    if labeled_df.empty:
+                        local_key = f"local_df_{file}"
+                        df_original = pd.read_csv(csv_path)
                         df = df_original.copy()
                         df[['user_name', 'binary_flag', 'timestamp']] = ''
                         st.session_state[local_key] = df
-                    else:
-                        st.session_state[local_key] = labeled_df.copy()
 
-                    labeled = st.session_state[local_key]['binary_flag'].notna().sum()
+                    df_local = st.session_state[local_key]
+                    total = len(df_local)
+                    labeled = df_local['binary_flag'].notna().sum()
                     is_complete = labeled == total
 
                     col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 2])
