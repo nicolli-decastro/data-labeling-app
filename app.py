@@ -206,21 +206,26 @@ else:
             # Replace df with session copy
             df = st.session_state.current_df
             
+            # Initialize the flag once (on first load or rerun)
+            if "label_submitted" not in st.session_state:
+                st.session_state.label_submitted = False
+
+            # Submit Label button
             if st.button("Submit Label"):
                 try:
                     idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
                     df.at[idx, 'binary_flag'] = str(label)
                     df.at[idx, 'user_name'] = str(st.session_state.user_username)
                     df.at[idx, 'timestamp'] = datetime.now().isoformat()
-                    st.button("Next Listing", disabled=False)
 
-                    if st.button("Next Listing"):
-                        st.rerun()
-
+                    st.session_state.label_submitted = True  # Enable Next Listing
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-            st.button("Next Listing", disabled=True)
+            # Next Listing button (enabled only if label was submitted)
+            if st.button("Next Listing", disabled=not st.session_state.label_submitted):
+                st.session_state.label_submitted = False  # Reset for the next row
+                st.rerun()
 
             st.divider()
             if labeled < total:
