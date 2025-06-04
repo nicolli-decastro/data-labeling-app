@@ -87,7 +87,6 @@ else:
                         drive_folder_id = du.create_drive_folder(folder_name, st.session_state.root_folder_id)
 
                     labeled_file_id = du.get_file_id_by_name(file, drive_folder_id)
-
                     local_key = f"local_df_{file}"
 
                     if labeled_file_id:
@@ -97,7 +96,6 @@ else:
                             df = df_original.copy()
                             df[['user_name', 'binary_flag', 'timestamp']] = ''
                             st.session_state[local_key] = df
-                            du.upload_csv(df, file, drive_folder_id)
                         else:
                             st.session_state[local_key] = labeled_df.copy()
                     else:
@@ -105,7 +103,6 @@ else:
                         df = df_original.copy()
                         df[['user_name', 'binary_flag', 'timestamp']] = ''
                         st.session_state[local_key] = df
-                        du.upload_csv(df, file, drive_folder_id)
 
                     df_local = st.session_state[local_key]
                     total = len(df_local)
@@ -121,6 +118,7 @@ else:
                         key = f"select_{folder_name}_{file}"
                         if labeled_file_id is None:
                             if st.button("🚀 Start Labeling", key=key):
+                                du.upload_csv(st.session_state[local_key], file, drive_folder_id)
                                 st.session_state.selected_dataset = {
                                     "csv_path": csv_path,
                                     "images_folder": images_folder,
@@ -153,14 +151,14 @@ else:
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
-    
+
     else:
         sel = st.session_state.selected_dataset
         st.title(f"📦 Labeling App")
 
         if "current_df" not in st.session_state:
-          st.session_state.current_df = du.download_csv(sel['drive_file'], sel['drive_folder_id'])
-    
+            st.session_state.current_df = du.download_csv(sel['drive_file'], sel['drive_folder_id'])
+
         df = st.session_state.current_df
         total = len(df)
         labeled = df['binary_flag'].notna().sum()
@@ -169,15 +167,14 @@ else:
 
         not_labeled = df[df['binary_flag'].isna()].reset_index(drop=True)
 
-        # Dataset Title
         st.subheader(f"Dataset: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')} ")
 
         if not_labeled.empty:
             try:
-              du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
-              st.success("🎉 All listings have been labeled and uploaded to the drive successfully!")
+                du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                st.success("🎉 All listings have been labeled and uploaded to the drive successfully!")
             except Exception as e:
-              st.error(f"Failed to submit labels: {e}")
+                st.error(f"Failed to submit labels: {e}")
         else:
             row = not_labeled.iloc[0]
             image_name = os.path.basename(row['photo_url'])
@@ -185,7 +182,7 @@ else:
 
             if os.path.exists(image_path):
                 container1 = st.container(border=True)
-                container1.subheader(f"{row['title']}")  
+                container1.subheader(f"{row['title']}")
                 container1.write(f"**Price:** {row['price']}")
                 container1.write(f"**Location:** {row['location']}")
                 container1.image(image_path, use_container_width=False)
@@ -197,18 +194,14 @@ else:
 
             label = container2.radio("Is this item likely stolen?", ["Yes", "No"])
 
-            # Initialize in session if not already stored
             if "current_df" not in st.session_state:
                 st.session_state.current_df = df.copy()
-            
-            # Replace df with session copy
+
             df = st.session_state.current_df
-            
-            # Initialize the flag once (on first load or rerun)
+
             if "label_submitted" not in st.session_state:
                 st.session_state.label_submitted = False
 
-            # Submit Label button
             if st.button("Submit Label"):
                 try:
                     idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
@@ -216,13 +209,12 @@ else:
                     df.at[idx, 'user_name'] = str(st.session_state.user_username)
                     df.at[idx, 'timestamp'] = datetime.now().isoformat()
 
-                    st.session_state.label_submitted = True  # Enable Next Listing
+                    st.session_state.label_submitted = True
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-            # Next Listing button (enabled only if label was submitted)
             if st.button("Next Listing", disabled=not st.session_state.label_submitted):
-                st.session_state.label_submitted = False  # Reset for the next row
+                st.session_state.label_submitted = False
                 st.rerun()
 
             st.divider()
@@ -232,16 +224,16 @@ else:
                     try:
                         du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
                         st.success("Progress saved to Google Drive!")
-                        st.session_state.label_submitted = False # Reset for the next row after progress is saved
+                        st.session_state.label_submitted = False
                         st.rerun()
                     except Exception as e:
                         st.error(f"Failed to upload: {e}")
             else:
                 try:
-                  du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
-                  st.success("🎉 All listings have been labeled and uploaded to the drive successfully!")
+                    du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                    st.success("🎉 All listings have been labeled and uploaded to the drive successfully!")
                 except Exception as e:
-                  st.error(f"Failed to submit labels: {e}")
+                    st.error(f"Failed to submit labels: {e}")
 
         st.divider()
         if st.button("⬅️ Back to Datasets"):
@@ -252,4 +244,3 @@ else:
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
-
