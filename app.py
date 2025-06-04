@@ -245,6 +245,7 @@ else:
                     try:
                         du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
                         st.success("Progress saved to Google Drive!")
+                        st.session_state.label_submitted = False # Reset for the next row after progress is saved
                         st.rerun()
                     except Exception as e:
                         st.error(f"Failed to upload: {e}")
