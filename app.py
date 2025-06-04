@@ -103,14 +103,23 @@ else:
                     labeled_file_id = du.get_file_id_by_name(file, drive_folder_id)
 
                     local_key = f"local_df_{file}"
+
                     if labeled_file_id:
                         labeled_df = du.download_csv(file, drive_folder_id)
-                        st.session_state[local_key] = labeled_df.copy()
+                        if labeled_df.empty:
+                            df_original = pd.read_csv(csv_path)
+                            df = df_original.copy()
+                            df[['user_name', 'binary_flag', 'timestamp']] = ''
+                            st.session_state[local_key] = df
+                            du.upload_csv(df, file, drive_folder_id)
+                        else:
+                            st.session_state[local_key] = labeled_df.copy()
                     else:
                         df_original = pd.read_csv(csv_path)
                         df = df_original.copy()
                         df[['user_name', 'binary_flag', 'timestamp']] = ''
                         st.session_state[local_key] = df
+                        du.upload_csv(df, file, drive_folder_id)
 
                     df_local = st.session_state[local_key]
                     total = len(df_local)
