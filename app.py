@@ -27,9 +27,15 @@ def save_all_progress():
             if subfolder_id:
                 du.upload_csv(dataset, filename, subfolder_id)
 
+def reset_local_dataframes():
+    for key in list(st.session_state.keys()):
+        if key.startswith("local_df_") or key == "current_df":
+            del st.session_state[key]
+
 # --- Login ---
 users_df = None
 if "user_name" not in st.session_state:
+    reset_local_dataframes()
     st.title("🔐 Login")
     with st.form("login_form"):
         username = st.text_input("Username")
@@ -59,8 +65,6 @@ else:
     if "selected_dataset" not in st.session_state:
         st.title(f"👋 Welcome, {st.session_state.user_name}!")
         st.markdown("This app is designed to label marketplace listings to help determine if an item might be stolen.")
-
-        # Setting is_complete variable to False so system is forced to look at the csv 
 
         is_complete = False
 
@@ -102,13 +106,12 @@ else:
                     total = len(df_original)
 
                     local_key = f"local_df_{file}"
-                    if local_key not in st.session_state:
-                        if labeled_df.empty:
-                            df = df_original.copy()
-                            df[['user_name', 'binary_flag', 'timestamp']] = ''
-                            st.session_state[local_key] = df
-                        else:
-                            st.session_state[local_key] = labeled_df.copy()
+                    if labeled_df.empty:
+                        df = df_original.copy()
+                        df[['user_name', 'binary_flag', 'timestamp']] = ''
+                        st.session_state[local_key] = df
+                    else:
+                        st.session_state[local_key] = labeled_df.copy()
 
                     labeled = st.session_state[local_key]['binary_flag'].notna().sum()
                     is_complete = labeled == total
