@@ -150,8 +150,10 @@ else:
 
         st.divider()
         if st.button("🔒 Logout"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
             st.rerun()
-
+    
     else:
         sel = st.session_state.selected_dataset
         st.title(f"📦 Labeling App")
@@ -247,7 +249,6 @@ else:
             st.rerun()
 
         if st.button("🔒 Logout"):
-            st.save_all_progress
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
