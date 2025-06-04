@@ -60,6 +60,10 @@ else:
         st.title(f"👋 Welcome, {st.session_state.user_name}!")
         st.markdown("This app is designed to label marketplace listings to help determine if an item might be stolen.")
 
+        # Setting is_complete variable to False so system is forced to look at the csv 
+
+        is_complete = False
+
         st.subheader("📋 Datasets")
         header_cols = st.columns([2, 1, 2, 1, 1, 2])
         headers = ["City", "Range", "Date", "Labeled", "Total", "Action"]
