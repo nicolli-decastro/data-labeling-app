@@ -24,8 +24,9 @@ def save_all_progress():
             folder_id = st.session_state.root_folder_id
             subfolder_name = filename.replace(".csv", "").split("_")[0]
             subfolder_id = du.get_folder_id_by_name(subfolder_name, parent_id=folder_id)
-            if subfolder_id:
-                du.upload_csv(dataset, filename, subfolder_id)
+            if not subfolder_id:
+                subfolder_id = du.create_drive_folder(subfolder_name, parent_id=folder_id)
+            du.upload_csv(dataset, filename, subfolder_id)
 
 def reset_local_dataframes():
     for key in list(st.session_state.keys()):
@@ -96,15 +97,16 @@ else:
                     range_miles = location_parts[-1]
 
                     drive_folder_id = du.get_folder_id_by_name(folder_name, parent_id=st.session_state.root_folder_id)
-                    labeled_file_id = du.get_file_id_by_name(file, drive_folder_id) if drive_folder_id else None
+                    if not drive_folder_id:
+                        drive_folder_id = du.create_drive_folder(folder_name, st.session_state.root_folder_id)
 
+                    labeled_file_id = du.get_file_id_by_name(file, drive_folder_id)
+
+                    local_key = f"local_df_{file}"
                     if labeled_file_id:
                         labeled_df = du.download_csv(file, drive_folder_id)
-                        local_key = f"local_df_{file}"
                         st.session_state[local_key] = labeled_df.copy()
                     else:
-                        labeled_df = pd.DataFrame()
-                        local_key = f"local_df_{file}"
                         df_original = pd.read_csv(csv_path)
                         df = df_original.copy()
                         df[['user_name', 'binary_flag', 'timestamp']] = ''
@@ -112,8 +114,8 @@ else:
 
                     df_local = st.session_state[local_key]
                     total = len(df_local)
-                    labeled = df_local['binary_flag'].notna().sum()
-                    is_complete = labeled == total
+                    labeled = df_local['binary_flag'].notna().sum() if 'binary_flag' in df_local.columns else 0
+                    is_complete = labeled == total and total > 0
 
                     col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 2])
                     with col1: st.write(location)
