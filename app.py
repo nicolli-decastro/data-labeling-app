@@ -68,8 +68,6 @@ else:
         st.title(f"👋 Welcome, {st.session_state.user_name}!")
         st.markdown("This app is designed to label marketplace listings to help determine if an item might be stolen.")
 
-        is_complete = False
-
         st.subheader("📋 Datasets")
         header_cols = st.columns([2, 1, 2, 1, 1, 3])
         headers = ["City", "Range", "Date", "Labeled", "Total", "Action"]
@@ -124,7 +122,6 @@ else:
                     df_local = st.session_state[local_key]
                     total = len(df_local)
                     labeled = df_local['binary_flag'].notna().sum() if 'binary_flag' in df_local.columns else 0
-                    is_complete = labeled == total and total > 0
 
                     col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 3])
                     with col1: st.write(location)
@@ -134,7 +131,20 @@ else:
                     with col5: st.write(total)
                     with col6:
                         key = f"select_{folder_name}_{file}"
-                        if is_complete:
+                        if labeled_file_id is None:
+                            if st.button("🚀 Start Labeling", key=key):
+                                st.session_state.selected_dataset = {
+                                    "csv_path": csv_path,
+                                    "images_folder": images_folder,
+                                    "folder_name": folder_name,
+                                    "location": location,
+                                    "range": range_miles,
+                                    "drive_file": file,
+                                    "drive_folder_id": drive_folder_id
+                                }
+                                st.session_state.current_df = st.session_state[local_key]
+                                st.rerun()
+                        elif labeled == total and total > 0:
                             st.button("✅ Complete", key=key, disabled=True)
                         else:
                             if st.button("🔘 Continue Labeling", key=key):
@@ -197,6 +207,7 @@ else:
                 st.warning(f"⚠️ Image not found: {image_name}")
 
             container2 = st.container(border=True)
+
             label = container2.radio("Is this item likely stolen?", ["Yes", "No"])
 
             # Initialize in session if not already stored
@@ -228,11 +239,13 @@ else:
                 st.rerun()
 
             st.divider()
+
             if labeled < total:
                 if st.button("💾 Save Progress"):
                     try:
                         du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
                         st.success("Progress saved to Google Drive!")
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Failed to upload: {e}")
             else:
