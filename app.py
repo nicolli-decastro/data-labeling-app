@@ -21,12 +21,17 @@ def save_all_progress():
         if key.startswith("local_df_"):
             filename = key.replace("local_df_", "")
             dataset = st.session_state[key]
+
+            # Use folder_id from selected_dataset if available
             folder_id = st.session_state.root_folder_id
-            subfolder_name = filename.replace(".csv", "").split("_")[0]
-            subfolder_id = du.get_folder_id_by_name(subfolder_name, parent_id=folder_id)
-            if not subfolder_id:
-                subfolder_id = du.create_drive_folder(subfolder_name, parent_id=folder_id)
-            du.upload_csv(dataset, filename, subfolder_id)
+            for dkey in list(st.session_state.keys()):
+                if dkey == "selected_dataset":
+                    selected = st.session_state[dkey]
+                    if selected.get("drive_file") == filename:
+                        folder_id = selected.get("drive_folder_id", folder_id)
+                        break
+
+            du.upload_csv(dataset, filename, folder_id)
 
 def reset_local_dataframes():
     for key in list(st.session_state.keys()):
