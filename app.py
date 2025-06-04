@@ -91,34 +91,32 @@ else:
 
                     if labeled_file_id:
                         labeled_df = du.download_csv(file, drive_folder_id)
-                        if labeled_df.empty:
-                            df_original = pd.read_csv(csv_path)
-                            df = df_original.copy()
-                            df[['user_name', 'binary_flag', 'timestamp']] = ''
-                            st.session_state[local_key] = df
-                        else:
-                            st.session_state[local_key] = labeled_df.copy()
+                        df = labeled_df.copy() if not labeled_df.empty else None
                     else:
+                        df = None
+
+                    if df is None:
                         df_original = pd.read_csv(csv_path)
                         df = df_original.copy()
                         df[['user_name', 'binary_flag', 'timestamp']] = ''
-                        st.session_state[local_key] = df
 
-                    df_local = st.session_state[local_key]
-                    total = len(df_local)
-                    labeled = df_local['binary_flag'].notna().sum() if 'binary_flag' in df_local.columns else 0
+                    st.session_state[local_key] = df
+
+                    total = len(df)
+                    labeled = df['binary_flag'].notna().sum() if 'binary_flag' in df.columns else 0
+                    file_in_drive = labeled_file_id is not None
 
                     col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 3])
                     with col1: st.write(location)
                     with col2: st.write(range_miles)
                     with col3: st.write(folder_name.replace("_", "/"))
-                    with col4: st.write(labeled)
+                    with col4: st.write(labeled if file_in_drive else 0)
                     with col5: st.write(total)
                     with col6:
                         key = f"select_{folder_name}_{file}"
-                        if labeled_file_id is None:
+                        if not file_in_drive:
                             if st.button("🚀 Start Labeling", key=key):
-                                du.upload_csv(st.session_state[local_key], file, drive_folder_id)
+                                du.upload_csv(df, file, drive_folder_id)
                                 st.session_state.selected_dataset = {
                                     "csv_path": csv_path,
                                     "images_folder": images_folder,
@@ -128,7 +126,7 @@ else:
                                     "drive_file": file,
                                     "drive_folder_id": drive_folder_id
                                 }
-                                st.session_state.current_df = st.session_state[local_key]
+                                st.session_state.current_df = df
                                 st.rerun()
                         elif labeled == total and total > 0:
                             st.button("✅ Complete", key=key, disabled=True)
@@ -143,7 +141,7 @@ else:
                                     "drive_file": file,
                                     "drive_folder_id": drive_folder_id
                                 }
-                                st.session_state.current_df = st.session_state[local_key]
+                                st.session_state.current_df = df
                                 st.rerun()
 
         st.divider()
