@@ -98,7 +98,7 @@ else:
                     if df is None:
                         df_original = pd.read_csv(csv_path)
                         df = df_original.copy()
-                        df[['user_name', 'binary_flag', 'timestamp']] = ''
+                        df[['user_name', 'binary_flag', 'timestamp']] = pd.NA
 
                     st.session_state[local_key] = df
 
