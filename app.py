@@ -202,7 +202,7 @@ else:
             if "label_submitted" not in st.session_state:
                 st.session_state.label_submitted = False
 
-            if st.button("Submit Label"):
+            if st.button("Submit Label", enabled=not st.session_state.label_submitted):
                 try:
                     idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
                     df.at[idx, 'binary_flag'] = str(label)
@@ -210,6 +210,7 @@ else:
                     df.at[idx, 'timestamp'] = datetime.now().isoformat()
 
                     st.session_state.label_submitted = True
+                    st.success(f"Label Successfully Submitted!")
                 except Exception as e:
                     st.error(f"Error: {e}")
 
@@ -220,7 +221,7 @@ else:
             st.divider()
 
             if labeled < total:
-                if st.button("📂 Save Progress"):
+                if st.button("💾 Save Progress"):
                     try:
                         du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
                         st.success("Progress saved to Google Drive!")
