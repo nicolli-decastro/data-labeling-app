@@ -56,7 +56,7 @@ else:
         st.title(f"👋 Welcome, {st.session_state.user_name}!")
         st.markdown("This app is designed to label marketplace listings to help determine if an item might be stolen.")
 
-        st.subheader("📋 Datasets")
+        st.subheader("📜 Datasets")
         header_cols = st.columns([2, 1, 2, 1, 1, 3])
         headers = ["City", "Range", "Date", "Labeled", "Total", "Action"]
         for col, label in zip(header_cols, headers):
@@ -159,7 +159,7 @@ else:
 
         df = st.session_state.current_df
         total = len(df)
-        labeled = df['binary_flag'].notna().sum()
+        labeled = df['binary_flag'].notna().sum() if 'binary_flag' in df.columns else 0
 
         st.progress(labeled / total if total else 0, text=f"{labeled} out of {total} listings labeled")
 
@@ -192,9 +192,11 @@ else:
 
             label = container2.radio("Is this item likely stolen?", ["Yes", "No"])
 
+            # Initialize in session if not already stored
             if "current_df" not in st.session_state:
                 st.session_state.current_df = df.copy()
 
+            # Replace df with session copy
             df = st.session_state.current_df
 
             if "label_submitted" not in st.session_state:
@@ -218,7 +220,7 @@ else:
             st.divider()
 
             if labeled < total:
-                if st.button("💾 Save Progress"):
+                if st.button("📂 Save Progress"):
                     try:
                         du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
                         st.success("Progress saved to Google Drive!")
