@@ -204,7 +204,7 @@ else:
 
             submit_label_disabled = st.session_state.label_submitted
 
-            if st.button("Submit Label", disabled=submit_label_disabled):
+            if st.button("Submit Label"):
                 try:
                     idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
                     df.at[idx, 'binary_flag'] = str(label)
