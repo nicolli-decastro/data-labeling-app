@@ -97,7 +97,7 @@ else:
                         labeled_df = du.download_csv(file, drive_folder_id)
                         df = labeled_df.copy() if not labeled_df.empty else None
                         # Checks for any update in the image folders in case new pictures were added or deleted
-                        df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(x))))
+                        df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(x))) if isinstance(x, str) else False)
                     else:
                         df = None
 
