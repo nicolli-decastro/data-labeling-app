@@ -195,17 +195,24 @@ else:
             image_path = os.path.join(sel['images_folder'], image_name)
 
             if row['image_exist'] == True:
-                if os.path.exists(image_path):
-                    container1 = st.container(border=True)
-                    container1.subheader(f"{row['title']}")
-                    container1.write(f"**Price:** {row['price']}")
-                    container1.write(f"**Location:** {row['location']}")
-                    container1.image(image_path, use_container_width=False)
-                    container1.write(f"**[View Listing]({row['listing_url']})**")
-                else:
+                try:
+                    if os.path.exists(image_path):
+                        container1 = st.container(border=True)
+                        container1.subheader(f"{row['title']}")
+                        container1.write(f"**Price:** {row['price']}")
+                        container1.write(f"**Location:** {row['location']}")
+                        container1.image(image_path, use_container_width=False)
+                        container1.write(f"**[View Listing]({row['listing_url']})**")
+                    else:
+                        idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
+                        df.at[idx, 'image_exist'] = False
+                        st.session_state.current_df = df
+                        st.rerun()
+                except Exception as e:
+                    st.warning(f"⚠️ Could not load image: {e}")
                     idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
                     df.at[idx, 'image_exist'] = False
-                    st.session_state.current_df = df  # 🧠 persist updated image_exist value
+                    st.session_state.current_df = df
                     st.rerun()
             else:
                 st.rerun()
