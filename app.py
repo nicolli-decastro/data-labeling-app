@@ -72,6 +72,10 @@ else:
                     continue
 
                 for file in os.listdir(folder_path):
+                    # Skip dataset if its images folder doesn't exist
+                    images_folder = os.path.join(folder_path, file.replace(".csv", "_files"))
+                    if not os.path.exists(images_folder):
+                        continue
                     if not file.endswith(".csv"):
                         continue
 
