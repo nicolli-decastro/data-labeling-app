@@ -92,18 +92,21 @@ else:
                     if labeled_file_id:
                         labeled_df = du.download_csv(file, drive_folder_id)
                         df = labeled_df.copy() if not labeled_df.empty else None
+                        # Checks for any update in the image folders in case new pictures were added or deleted
+                        df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(x))))
                     else:
                         df = None
 
                     if df is None:
                         df_original = pd.read_csv(csv_path)
                         df = df_original.copy()
+                        df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(x))))
                         df[['user_name', 'binary_flag', 'timestamp']] = pd.NA
 
                     st.session_state[local_key] = df
 
-                    total = len(df)
-                    labeled = df['binary_flag'].notna().sum() if 'binary_flag' in df.columns else 0
+                    total = len(df[df['image_exist'] == True])
+                    labeled = df[(df['binary_flag'].notna()) & (df['image_exist'] == True)].shape[0] if 'binary_flag' in df.columns else 0
                     file_in_drive = labeled_file_id is not None
 
                     col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 3])
@@ -158,8 +161,8 @@ else:
             st.session_state.current_df = du.download_csv(sel['drive_file'], sel['drive_folder_id'])
 
         df = st.session_state.current_df
-        total = len(df)
-        labeled = df['binary_flag'].notna().sum() if 'binary_flag' in df.columns else 0
+        total = len(df[df['image_exist'] == True])
+        labeled = df[(df['binary_flag'].notna()) & (df['image_exist'] == True)].shape[0] if 'binary_flag' in df.columns else 0
 
         st.progress(labeled / total if total else 0, text=f"{labeled} out of {total} listings labeled")
 
@@ -178,15 +181,20 @@ else:
             image_name = os.path.basename(row['photo_url'])
             image_path = os.path.join(sel['images_folder'], image_name)
 
-            if os.path.exists(image_path):
-                container1 = st.container(border=True)
-                container1.subheader(f"{row['title']}")
-                container1.write(f"**Price:** {row['price']}")
-                container1.write(f"**Location:** {row['location']}")
-                container1.image(image_path, use_container_width=False)
-                container1.write(f"**[View Listing]({row['listing_url']})**")
+            if row['image_exist'] == True:
+                if os.path.exists(image_path):
+                    container1 = st.container(border=True)
+                    container1.subheader(f"{row['title']}")
+                    container1.write(f"**Price:** {row['price']}")
+                    container1.write(f"**Location:** {row['location']}")
+                    container1.image(image_path, use_container_width=False)
+                    container1.write(f"**[View Listing]({row['listing_url']})**")
+                else:
+                    idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
+                    df.at[idx, 'image_exist'] = False
+                    st.rerun()
             else:
-                st.warning(f"⚠️ Image not found: {image_name}")
+                st.rerun()
 
             container2 = st.container(border=True)
 
@@ -240,10 +248,26 @@ else:
 
         st.divider()
         if st.button("⬅️ Back to Datasets"):
-            del st.session_state.selected_dataset
-            st.rerun()
+            try:
+                du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                st.success("Progress saved to Google Drive!")
+                st.session_state.label_submitted = False
+                del st.session_state.selected_dataset
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to upload: {e}")
 
+        # Ask user if they want to save progress before logout
         if st.button("🔒 Logout"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
+            if st.session_state.label_submitted or df['binary_flag'].notna().any():
+                if st.confirm("Do you want to save your progress before logging out? This will upload your work to Google Drive."):
+                    try:
+                        du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                        st.success("Progress saved to Google Drive!")
+
+                        for key in list(st.session_state.keys()):
+                            del st.session_state[key]
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"Failed to upload labeled listings to Google Drive: {e}")
