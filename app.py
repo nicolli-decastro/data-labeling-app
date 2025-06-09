@@ -93,6 +93,7 @@ else:
                     labeled_file_id = du.get_file_id_by_name(file, drive_folder_id)
                     local_key = f"local_df_{file}"
 
+                    # If there is a df in the Drive download this csv and check again for any updates in the images in the folder
                     if labeled_file_id:
                         labeled_df = du.download_csv(file, drive_folder_id)
                         df = labeled_df.copy() if not labeled_df.empty else None
@@ -101,6 +102,7 @@ else:
                     else:
                         df = None
 
+                    # If there is no df in the Drive creates a copy of the local df with the new columns
                     if df is None:
                         df_original = pd.read_csv(csv_path)
                         df = df_original.copy()
@@ -265,17 +267,29 @@ else:
             except Exception as e:
                 st.error(f"Failed to upload: {e}")
 
-        # Ask user if they want to save progress before logout
+     # Ask user if they want to save progress before logout
         if st.button("🔒 Logout"):
+    
             if st.session_state.label_submitted or df['binary_flag'].notna().any():
-                if st.confirm("Do you want to save your progress before logging out? This will upload your work to Google Drive."):
-                    try:
-                        du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
-                        st.success("Progress saved to Google Drive!")
-
-                        for key in list(st.session_state.keys()):
-                            del st.session_state[key]
-                        st.rerun()
-                        
-                    except Exception as e:
-                        st.error(f"Failed to upload labeled listings to Google Drive: {e}")
+                with st.expander("⚠️ Unsaved changes detected. Save before logout?"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("💾 Save and Logout"):
+                            try:
+                                du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                                st.success("Progress saved to Google Drive!")
+                                for key in list(st.session_state.keys()):
+                                    del st.session_state[key]
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Failed to upload labeled listings to Google Drive: {e}")
+                    with col2:
+                        if st.button("❌ Logout Without Saving"):
+                            for key in list(st.session_state.keys()):
+                                del st.session_state[key]
+                            st.rerun()
+            else:
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                st.rerun()
+                    
