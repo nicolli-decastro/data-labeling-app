@@ -113,43 +113,46 @@ else:
                     labeled = df[(df['binary_flag'].notna()) & (df['image_exist'] == True)].shape[0] if 'binary_flag' in df.columns else 0
                     file_in_drive = labeled_file_id is not None
 
-                    col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 3])
-                    with col1: st.write(location)
-                    with col2: st.write(range_miles)
-                    with col3: st.write(folder_name.replace("_", "/"))
-                    with col4: st.write(labeled if file_in_drive else 0)
-                    with col5: st.write(total)
-                    with col6:
-                        key = f"select_{folder_name}_{file}"
-                        if not file_in_drive:
-                            if st.button("🚀 Start Labeling", key=key):
-                                du.upload_csv(df, file, drive_folder_id)
-                                st.session_state.selected_dataset = {
-                                    "csv_path": csv_path,
-                                    "images_folder": images_folder,
-                                    "folder_name": folder_name,
-                                    "location": location,
-                                    "range": range_miles,
-                                    "drive_file": file,
-                                    "drive_folder_id": drive_folder_id
-                                }
-                                st.session_state.current_df = df
-                                st.rerun()
-                        elif labeled == total and total > 0:
-                            st.button("✅ Complete", key=key, disabled=True)
-                        else:
-                            if st.button("🔘 Continue Labeling", key=key):
-                                st.session_state.selected_dataset = {
-                                    "csv_path": csv_path,
-                                    "images_folder": images_folder,
-                                    "folder_name": folder_name,
-                                    "location": location,
-                                    "range": range_miles,
-                                    "drive_file": file,
-                                    "drive_folder_id": drive_folder_id
-                                }
-                                st.session_state.current_df = df
-                                st.rerun()
+                    if total == 0:
+                        continue
+                    else:
+                        col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 2, 1, 1, 3])
+                        with col1: st.write(location)
+                        with col2: st.write(range_miles)
+                        with col3: st.write(folder_name.replace("_", "/"))
+                        with col4: st.write(labeled if file_in_drive else 0)
+                        with col5: st.write(total)
+                        with col6:
+                            key = f"select_{folder_name}_{file}"
+                            if not file_in_drive:
+                                if st.button("🚀 Start Labeling", key=key):
+                                    du.upload_csv(df, file, drive_folder_id)
+                                    st.session_state.selected_dataset = {
+                                        "csv_path": csv_path,
+                                        "images_folder": images_folder,
+                                        "folder_name": folder_name,
+                                        "location": location,
+                                        "range": range_miles,
+                                        "drive_file": file,
+                                        "drive_folder_id": drive_folder_id
+                                    }
+                                    st.session_state.current_df = df
+                                    st.rerun()
+                            elif labeled == total and total > 0:
+                                st.button("✅ Complete", key=key, disabled=True)
+                            else:
+                                if st.button("🔘 Continue Labeling", key=key):
+                                    st.session_state.selected_dataset = {
+                                        "csv_path": csv_path,
+                                        "images_folder": images_folder,
+                                        "folder_name": folder_name,
+                                        "location": location,
+                                        "range": range_miles,
+                                        "drive_file": file,
+                                        "drive_folder_id": drive_folder_id
+                                    }
+                                    st.session_state.current_df = df
+                                    st.rerun()
 
         st.divider()
         if st.button("🔒 Logout"):
@@ -180,6 +183,7 @@ else:
                 st.success("🎉 All listings have been labeled and uploaded to the drive successfully!")
             except Exception as e:
                 st.error(f"Failed to submit labels: {e}")
+
         else:
             row = not_labeled.iloc[0]
             image_name = os.path.basename(row['photo_url'])
