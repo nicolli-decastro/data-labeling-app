@@ -104,7 +104,7 @@ else:
                     if df is None:
                         df_original = pd.read_csv(csv_path)
                         df = df_original.copy()
-                        df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(x))))
+                        df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(str(x)))) if isinstance(x, str) or not pd.isna(x) else False)
                         df[['user_name', 'binary_flag', 'timestamp']] = pd.NA
 
                     st.session_state[local_key] = df
