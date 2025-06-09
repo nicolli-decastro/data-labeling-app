@@ -205,6 +205,7 @@ else:
                 else:
                     idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
                     df.at[idx, 'image_exist'] = False
+                    st.session_state.current_df = df  # 🧠 persist updated image_exist value
                     st.rerun()
             else:
                 st.rerun()
