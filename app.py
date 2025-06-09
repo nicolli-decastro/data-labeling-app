@@ -107,7 +107,10 @@ else:
                         df_original = pd.read_csv(csv_path)
                         df = df_original.copy()
                         df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(str(x)))) if isinstance(x, str) or not pd.isna(x) else False)
-                        df[['user_name', 'binary_flag', 'timestamp']] = pd.NA
+                        df['user_name'] = pd.Series([pd.NA] * len(df), dtype="string")
+                        df['binary_flag'] = pd.Series([pd.NA] * len(df), dtype="string")
+                        df['timestamp'] = pd.Series([pd.NA] * len(df), dtype="string")
+
 
                     st.session_state[local_key] = df
 
@@ -291,5 +294,5 @@ else:
             else:
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
-                st.rerun()
+                    st.rerun()
                     
