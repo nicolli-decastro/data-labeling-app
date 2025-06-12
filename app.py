@@ -2,6 +2,7 @@
 
 import streamlit as st
 import pandas as pd
+import sys
 import os
 import re
 from datetime import datetime
@@ -178,7 +179,9 @@ else:
 
         st.progress(labeled / total if total else 0, text=f"{labeled} out of {total} listings labeled")
 
-        not_labeled = df[df['binary_flag'].isna()].reset_index(drop=True)
+        df_with_image = df[df['image_exist'] == True].reset_index(drop=True)
+
+        not_labeled = df_with_image[df_with_image['binary_flag'].isna()].reset_index(drop=True)
 
         st.subheader(f"Dataset: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')} ")
 
@@ -193,6 +196,12 @@ else:
             row = not_labeled.iloc[0]
             image_name = os.path.basename(row['photo_url'])
             image_path = os.path.join(sel['images_folder'], image_name)
+
+            image_exists = row['image_exist']
+            print("Does the next listing have an image?", image_exists)
+            sys.stdout.flush()
+
+            # import pdb; pdb.set_trace()
 
             if row['image_exist'] == True:
                 try:
@@ -228,50 +237,75 @@ else:
             # Replace df with session copy
             df = st.session_state.current_df
 
-            if "label_submitted" not in st.session_state:
-                st.session_state.label_submitted = False
+            idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
+            print("The binary flag for this listing with index: ", idx, " is ", df.at[idx, 'binary_flag'])
 
-            submit_label_disabled = st.session_state.label_submitted
+            # Initialize the current listing ID
+            current_listing_id = f"{row['listing_url']}__{row['photo_url']}"
+            # Check if current listing ID and the listing id of the labeled row are the same
+            is_same_listing = st.session_state.get("last_labeled_id", "") == current_listing_id
 
-            if st.button("Submit Label"):
-                try:
-                    idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
-                    df.at[idx, 'binary_flag'] = str(label)
-                    df.at[idx, 'user_name'] = str(st.session_state.user_username)
-                    df.at[idx, 'timestamp'] = datetime.now().isoformat()
-
-                    st.session_state.label_submitted = True
-                    st.success(f"Label Successfully Submitted!")
-                except Exception as e:
-                    st.error(f"Error: {e}")
-
-            if st.button("Next Listing", disabled=not st.session_state.label_submitted):
-                st.session_state.label_submitted = False
-                st.rerun()
-
-            st.divider()
-
-            if labeled < total:
-                if st.button("💾 Save Progress"):
-                    try:
-                        du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
-                        st.success("Progress saved to Google Drive!")
-                        st.session_state.label_submitted = False
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Failed to upload: {e}")
+            if st.session_state.get("label_submitted", False) and is_same_listing:
+                st.info("✅ Label already submitted")
+                btn_lbl_text = "Re-submit Label"
             else:
+                st.session_state.label_submitted = False  # reset if it's a new listing
+                btn_lbl_text = "Submit Label"
+
+            col1, col2, col3, col4, col5, col6 = st.columns([1, 1, 1, 1, 1,0.5])
+            
+            with col1:
+                btnSubmit = st.button(btn_lbl_text, type='secondary')
+                if btnSubmit:
+                    try:
+                        idx = df[(df['listing_url'] == row['listing_url']) & (df['photo_url'] == row['photo_url'])].index[0]
+                        df.at[idx, 'binary_flag'] = str(label)
+                        df.at[idx, 'user_name'] = str(st.session_state.user_username)
+                        df.at[idx, 'timestamp'] = datetime.now().isoformat()
+
+                        st.session_state.label_submitted = True
+                        st.session_state.last_labeled_id = current_listing_id  # ← TRACK this listing specifically
+
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+
+            with col2:
+                if st.session_state.get("label_submitted", False):
+                        if st.button("Next Listing"):
+                            st.session_state.label_submitted = False
+                            st.session_state.last_labeled_id = ""
+                            st.rerun()
+            
+            if st.session_state.get("label_submitted", False):
+                st.success(f"Label Successfully Submitted!")
+
+        print("OIIII")
+        st.divider()
+
+        if labeled < total:
+            if st.button("💾 Save Progress"):
                 try:
-                    du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
-                    st.success("🎉 All listings have been labeled and uploaded to the drive successfully!")
+                    with st.spinner("Saving Progress...", show_time=True):
+                        du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                    st.success("Progress saved to Google Drive!")
+
                 except Exception as e:
-                    st.error(f"Failed to submit labels: {e}")
+                    st.error(f"Failed to upload: {e}")
+
+        else:
+            try:
+                du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                st.success("🎉 All listings have been labeled and uploaded to the drive successfully!")
+            except Exception as e:
+                st.error(f"Failed to submit labels: {e}")
 
         st.divider()
         if st.button("⬅️ Back to Datasets"):
             try:
-                du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                with st.spinner("Saving Progress...", show_time=True):
+                    du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
                 st.success("Progress saved to Google Drive!")
+                
                 st.session_state.label_submitted = False
                 del st.session_state.selected_dataset
                 st.rerun()
@@ -282,12 +316,13 @@ else:
         if st.button("🔒 Logout"):
     
             if st.session_state.label_submitted or df['binary_flag'].notna().any():
-                with st.expander("⚠️ Unsaved changes detected. Save before logout?"):
+                with st.expander("⚠️ Unsaved chansges detected. Save before logout?"):
                     col1, col2 = st.columns(2)
                     with col1:
                         if st.button("💾 Save and Logout"):
                             try:
-                                du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                                with st.spinner("Saving Progress...", show_time=True):
+                                    du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
                                 st.success("Progress saved to Google Drive!")
                                 for key in list(st.session_state.keys()):
                                     del st.session_state[key]
