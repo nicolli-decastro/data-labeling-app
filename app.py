@@ -263,6 +263,7 @@ else:
                         df.at[idx, 'user_name'] = str(st.session_state.user_username)
                         df.at[idx, 'timestamp'] = datetime.now().isoformat()
 
+                        st.session_state.progress_saved = False
                         st.session_state.label_submitted = True
                         st.session_state.last_labeled_id = current_listing_id  # ← TRACK this listing specifically
 
@@ -272,6 +273,7 @@ else:
             with col2:
                 if st.session_state.get("label_submitted", False):
                         if st.button("Next Listing"):
+
                             st.session_state.label_submitted = False
                             st.session_state.last_labeled_id = ""
                             st.rerun()
@@ -282,6 +284,9 @@ else:
         print("OIIII")
         st.divider()
 
+        print("Total listings labeled: ", labeled)
+        print("Total listings: ", total)
+
         if labeled < total:
             if st.button("💾 Save Progress"):
                 try:
@@ -289,9 +294,10 @@ else:
                         du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
                     st.success("Progress saved to Google Drive!")
 
+                    st.session_state.progress_saved = True
+
                 except Exception as e:
                     st.error(f"Failed to upload: {e}")
-
         else:
             try:
                 du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
@@ -301,41 +307,42 @@ else:
 
         st.divider()
         if st.button("⬅️ Back to Datasets"):
-            try:
-                with st.spinner("Saving Progress...", show_time=True):
-                    du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
-                st.success("Progress saved to Google Drive!")
-                
-                st.session_state.label_submitted = False
+            print("Status of progress saved: ", st.session_state.progress_saved)
+            if st.session_state.progress_saved == False:
+                try:
+                    with st.spinner("Saving Progress...", show_time=True):
+                        du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                    st.success("Progress saved to Google Drive!")
+                    st.session_state.label_submitted = False
+                    st.session_state.progress_saved = True
+                    del st.session_state.selected_dataset
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to upload: {e}")
+            else:
                 del st.session_state.selected_dataset
                 st.rerun()
-            except Exception as e:
-                st.error(f"Failed to upload: {e}")
 
      # Ask user if they want to save progress before logout
-        if st.button("🔒 Logout"):
-    
-            if st.session_state.label_submitted or df['binary_flag'].notna().any():
-                with st.expander("⚠️ Unsaved chansges detected. Save before logout?"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button("💾 Save and Logout"):
-                            try:
-                                with st.spinner("Saving Progress...", show_time=True):
-                                    du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
-                                st.success("Progress saved to Google Drive!")
-                                for key in list(st.session_state.keys()):
-                                    del st.session_state[key]
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Failed to upload labeled listings to Google Drive: {e}")
-                    with col2:
-                        if st.button("❌ Logout Without Saving"):
-                            for key in list(st.session_state.keys()):
-                                del st.session_state[key]
-                            st.rerun()
-            else:
+        with st.popover("🔒 Logout",):
+            if st.button("💾 Save and Logout", key="btn_save_logout"):
+                print("Button save and logout clicked")
+                try:
+                    with st.spinner("Saving Progress...", show_time=True):
+                        du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                    st.success("Progress saved to Google Drive!")
+                    for key in list(st.session_state.keys()):
+                        del st.session_state[key]
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to upload labeled listings to Google Drive: {e}")
+            if st.button("❌ Logout Without Saving", key="btn_logout_no_save"):
+                print("Button logout clicked")
+                st.write("You will be logged out")
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
-                    st.rerun()
+                st.rerun()
+
+
+            
                     
