@@ -245,7 +245,7 @@ with col4:
                     copy_df.at[index[0], 'user_name'] = str(st.session_state.user_username)
                     copy_df.at[index[0], 'timestamp'] = datetime.now().isoformat()
 
-            rain(emoji="🎉", font_size = 54, falling_speed = 5, animation_length = 10)        
+            #rain(emoji="🎉", font_size = 54, falling_speed = 5, animation_length = 10)        
             st.session_state.labels_submitted = True
             st.session_state.progress_saved = False
             st.session_state.recent_labeled_df = copy_df
