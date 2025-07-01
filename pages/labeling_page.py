@@ -7,8 +7,8 @@ from datetime import datetime
 import drive_utils as du
 import base64
 import math
-import streamlit_extras
-from streamlit_extras.let_it_rain import rain
+# import streamlit_extras
+# from streamlit_extras.let_it_rain import rain
 
 st.set_page_config(page_title="Labeling App", layout="wide")
 
