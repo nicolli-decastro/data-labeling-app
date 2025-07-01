@@ -154,7 +154,7 @@ st.markdown(
 
 if labeled == total:
     # du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
-    rain(emoji="🎉", font_size = 54, falling_speed = 5, animation_length = 10)
+    # rain(emoji="🎉", font_size = 54, falling_speed = 5, animation_length = 10)
     st.success("🎉 All listings have been labeled and uploaded to the drive successfully!")
 
 # Create 5x5 grid
@@ -230,7 +230,7 @@ if "labels_submitted" not in st.session_state:
 col1, col2, col3, col4, col5, col6, col7 = st.columns([2,2,2,2,2, 2,2])
 with col4:
     if st.session_state.labels_submitted == False:
-        if st.button("**✅ Submit Labels**", type="primary"):
+        if st.button("**✅ Submit Labels**", type="secondary"):
             listing = 0
             # Copying original dataframe 
             copy_df  = df.copy(deep=True)
