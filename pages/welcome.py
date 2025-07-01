@@ -12,7 +12,7 @@ if "user_name" not in st.session_state:
 # GitHub folder config (dataset folders pushed with the app)
 DATASETS_DIR = os.path.join(os.getcwd(), "Data")
 
-st.set_page_config(page_title="Welcome", layout="wide")
+st.set_page_config(page_title="Welcome", layout="centered")
 
 # Hide the sidebar completely
 hide_sidebar = """

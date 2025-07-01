@@ -7,6 +7,8 @@ from datetime import datetime
 import drive_utils as du
 import base64
 import math
+import streamlit_extras
+from streamlit_extras.let_it_rain import rain
 
 st.set_page_config(page_title="Labeling App", layout="wide")
 
@@ -25,7 +27,25 @@ if "selected_dataset" not in st.session_state:
     st.stop()
 
 sel = st.session_state.selected_dataset
-st.title(f"📦 Labeling App")
+
+# MAIN TITLE
+
+col1, col2, col3 = st.columns([4, 1, 0.7])  # side space, center title, side button
+
+with col1:
+    st.title("📦 Labeling App")
+
+with col3:
+    st.markdown("<div style='height: 40px'></div>", unsafe_allow_html=True)  # vertical alignment fix
+    if st.button("💾 Save Progress", key="save_progress_side"):
+        try:
+            with st.spinner("Saving Progress...", show_time=True):
+                du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+            st.success("Progress saved to Google Drive!")
+            st.session_state.progress_saved = True
+        except Exception as e:
+            st.error(f"Failed to upload: {e}")
+    
 
 if "current_df" not in st.session_state:
     st.header("Current df not in the system")
@@ -42,17 +62,21 @@ else:
     recent_df = st.session_state.recent_labeled_df
     display_labeled = recent_df[(recent_df['binary_flag'].notna()) & (recent_df['image_exist'] == True)].shape[0] if 'binary_flag' in recent_df.columns else 0
 
+# PROGRESS BAR
+
 st.progress(display_labeled / total if total else 0, text=f"{display_labeled} out of {total} listings labeled")
 
 df_with_image = df[df['image_exist'] == True].reset_index(drop=True)
 
 not_labeled = df_with_image[df_with_image['binary_flag'].isna()].reset_index(drop=True)
 
-col1, col2, col3, col4 = st.columns([4, 3, 1.2, 0.7])
+# HEADER DATASET INFO
+
+col1, col2, col3, col4 = st.columns([4, 3, 1.5, 0.7])
 with col1:
     st.markdown(
         f"""
-        <div style="font-size:24px; font-weight:500; margin-bottom:4px;">
+        <div style=" font-size:24px; font-weight:500; margin-bottom:18px;">
             Dataset: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')}
         </div>
         """, unsafe_allow_html=True
@@ -60,7 +84,27 @@ with col1:
 
 if "labels_submitted" in st.session_state and st.session_state.labels_submitted == True:
     with col3:
-        st.success("Labels submitted!")
+        st.markdown("""
+    <div style="
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border: 0px solid #4CAF50;
+        background-color: #eafbea;
+        color: #2e7d32;
+        font-size: 15px;
+        font-weight: 500;
+        padding: 7px 10px;
+        border-radius: 7px;
+        margin-top: 0px;
+        width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
+    ">
+        ✅ Labels Submitted!
+    </div>
+""", unsafe_allow_html=True)
+        
     with col4: 
         if st.button("➡️ Next"):
             st.session_state.labels_submitted = False
@@ -68,7 +112,7 @@ if "labels_submitted" in st.session_state and st.session_state.labels_submitted 
             # st.session_state.recent_labeled_df = ""
             st.rerun()
 
-st.markdown("<hr style='margin:6px 0;' />", unsafe_allow_html=True)
+st.markdown("<hr style='margin:1px 0;' />", unsafe_allow_html=True)
 
 # Total pages based on df_with_image (entire set of listings with images)
 items_per_page = 25
@@ -110,6 +154,7 @@ st.markdown(
 
 if labeled == total:
     # du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+    rain(emoji="🎉", font_size = 54, falling_speed = 5, animation_length = 10)
     st.success("🎉 All listings have been labeled and uploaded to the drive successfully!")
 
 # Create 5x5 grid
@@ -179,60 +224,72 @@ for row_df in rows:
                 selected = st.checkbox('Likely Stolen', key=uid)
                 st.session_state.batch_labels[uid] = selected
 
-st.divider()
-
 if "labels_submitted" not in st.session_state:
     st.session_state.labels_submitted = False
 
-col1, col2, col3, col4 = st.columns([2, 2, 2, 2])
-with col1:
-    if st.button("✅ Submit Labels"):
-        listing = 0
-        # Copying original dataframe 
-        copy_df  = df.copy(deep=True)
-        for row in page_df.itertuples():
-            uid = f"{row.listing_url}__{row.photo_url}"
-            is_stolen = st.session_state.batch_labels.get(uid)
+col1, col2, col3, col4, col5, col6, col7 = st.columns([2,2,2,2,2, 2,2])
+with col4:
+    if st.session_state.labels_submitted == False:
+        if st.button("**✅ Submit Labels**", type="primary"):
+            listing = 0
+            # Copying original dataframe 
+            copy_df  = df.copy(deep=True)
+            for row in page_df.itertuples():
+                uid = f"{row.listing_url}__{row.photo_url}"
+                is_stolen = st.session_state.batch_labels.get(uid)
 
-            index = copy_df[(copy_df['listing_url'] == row.listing_url) & (copy_df['photo_url'] == row.photo_url)].index
-            if not index.empty:
-                listing += 1
-                copy_df.at[index[0], 'binary_flag'] = "Yes" if is_stolen else "No"
-                copy_df.at[index[0], 'user_name'] = str(st.session_state.user_username)
-                copy_df.at[index[0], 'timestamp'] = datetime.now().isoformat()
-                
-        st.session_state.labels_submitted = True
-        st.session_state.progress_saved = False
-        st.session_state.recent_labeled_df = copy_df
-        st.session_state.batch_labels = {}
-        st.rerun()
+                index = copy_df[(copy_df['listing_url'] == row.listing_url) & (copy_df['photo_url'] == row.photo_url)].index
+                if not index.empty:
+                    listing += 1
+                    copy_df.at[index[0], 'binary_flag'] = "Yes" if is_stolen else "No"
+                    copy_df.at[index[0], 'user_name'] = str(st.session_state.user_username)
+                    copy_df.at[index[0], 'timestamp'] = datetime.now().isoformat()
 
-with col2:
+            rain(emoji="🎉", font_size = 54, falling_speed = 5, animation_length = 10)        
+            st.session_state.labels_submitted = True
+            st.session_state.progress_saved = False
+            st.session_state.recent_labeled_df = copy_df
+            st.session_state.batch_labels = {}
+            st.rerun()
+    else:
+        if st.button("✅ Submit Labels", type="secondary"):
+            st.success("Labels already submitted")
+
+with col6:
     if st.session_state.labels_submitted == True:
-        if st.button("➡️ Next Page"):
+        st.markdown("""
+    <div style="
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border: 0px solid #4CAF50;
+        background-color: #eafbea;
+        color: #2e7d32;
+        font-size: 15px;
+        font-weight: 500;
+        padding: 7px 10px;
+        border-radius: 7px;
+        margin-top: 0px;
+        width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
+    ">
+        ✅ Labels Submitted!
+    </div>
+""", unsafe_allow_html=True)
+
+with col7:
+    if st.session_state.labels_submitted == True:
+        if st.button("**➡️ Next Page**", type="secondary"):
             st.session_state.labels_submitted = False
             st.session_state.current_df = st.session_state.recent_labeled_df
             # st.session_state.recent_labeled_df = ""
             st.rerun()
 
-if st.session_state.labels_submitted == True:
-    st.success("Labels submitted!")
-
-
-#copy_df = st.session_state.recent_labeled_df
-df = st.session_state.current_df
-#num_labeled_copy = copy_df[(copy_df['binary_flag'].notna()) & (copy_df['image_exist'] == True)].shape[0] if 'binary_flag' in copy_df.columns else 0
-num_labeled_original = df[(df['binary_flag'].notna()) & (df['image_exist'] == True)].shape[0] if 'binary_flag' in df.columns else 0
-#st.header(f"Total of {num_labeled_copy} labeled listings in copied df")
-st.header(f"Total of {num_labeled_original} labeled listings in original df")
-
-if "recent_labeled_df" in st.session_state:
-    diff = st.session_state.recent_labeled_df['binary_flag'].compare(st.session_state.current_df['binary_flag'])
-    st.write("Differences in labels between recent and current:")
-    st.write(diff)
+st.markdown("<hr style='margin:1px 0;' />", unsafe_allow_html=True)
 
 if labeled < total:
-    if st.button("💾 Save Progress"):
+    if st.button("💾 Save Progress", key="save_progress_bottom"):
         try:
             with st.spinner("Saving Progress...", show_time=True):
                 du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
@@ -243,7 +300,8 @@ if labeled < total:
         except Exception as e:
             st.error(f"Failed to upload: {e}")
 
-st.divider()
+# st.markdown("<hr style='margin:1px 0;' />", unsafe_allow_html=True)
+
 if st.button("⬅️ Back to Datasets"):
     # print("Status of progress saved: ", st.session_state.progress_saved)
     # if st.session_state.progress_saved == False:
