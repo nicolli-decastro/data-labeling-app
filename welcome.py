@@ -30,7 +30,6 @@ with content_col:
     
     st.subheader("📜 Datasets")
 
-
     header_cols = st.columns([1.2, 1, 1, 1, 0.8, 1.9,1.8])
     headers = ["City", "Range", "Date", "Labeled", "Total", "Action", "Download"]
     

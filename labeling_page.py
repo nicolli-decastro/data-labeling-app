@@ -313,7 +313,8 @@ if labeled < total:
     if st.button("💾 Save Progress", key="save_progress_bottom"):
         try:
             with st.spinner("Saving Progress...", show_time=True):
-                du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                df_tosave = st.session_state.recent_labeled_df
+                du.upload_csv(df_tosave, sel['drive_file'], sel['drive_folder_id'])
             st.success("Progress saved to Google Drive!")
 
             st.session_state.progress_saved = True
@@ -332,7 +333,8 @@ if st.button("⬅️ Back to Datasets"):
         if "progress_saved" not in st.session_state or st.session_state.progress_saved == False:
             try:
                 with st.spinner("Saving Progress...", show_time=True):
-                    du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                    df_tosave = st.session_state.recent_labeled_df
+                    du.upload_csv(df_tosave, sel['drive_file'], sel['drive_folder_id'])
                 st.success("Progress saved to Google Drive!")
                 st.session_state.label_submitted = False
                 st.session_state.progress_saved = True
