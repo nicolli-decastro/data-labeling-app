@@ -76,7 +76,7 @@ col1, col2, col3, col4 = st.columns([4, 3, 1.5, 0.7])
 with col1:
     st.markdown(
         f"""
-        <div style=" font-size:24px; font-weight:500; margin-bottom:18px;">
+        <div style=" font-size:28px; font-weight:500; margin-bottom:18px;">
             Dataset: {sel['location']} ({sel['range']}) | {sel['folder_name'].replace('_', '/')}
         </div>
         """, unsafe_allow_html=True
@@ -166,6 +166,8 @@ rows = [page_df[i:i+num_cols] for i in range(0, len(page_df), num_cols)]
 if "batch_labels" not in st.session_state:
     st.session_state.batch_labels = {}
 
+# Creating each listing using the rows in the df
+
 for row_df in rows:
     cols = st.columns(num_cols)
     for idx, col in enumerate(cols):
@@ -174,6 +176,29 @@ for row_df in rows:
             uid = f"{listing['listing_url']}__{listing['photo_url']}"
             image_name = os.path.basename(listing['photo_url'])
             image_path = os.path.join(sel['images_folder'], image_name)
+
+            # Checkbox outside the HTML so Streamlit can capture its state
+            # if f"batch_labels[{uid}]" not in st.session_state:
+            if uid not in st.session_state.batch_labels:
+                # if st.session_state.batch_labels[uid]
+                st.session_state.batch_labels[uid] = False
+
+            # Determine current state
+            is_selected = st.session_state.batch_labels[uid]
+
+            # Define appearance
+            label = "✅ Likely Stolen" if is_selected else "⬜ Likely Stolen"
+            button_type = "primary" if is_selected else "secondary"
+
+            # Create the border status for each listing co
+            if st.session_state.batch_labels[uid] == True:
+                border_style = "4px solid steelblue"
+            else:
+                border_style = "4px solid white"
+
+            # st.markdown(f"{uid}")
+            
+            # Capturing the state of the selected item
 
             with col.container(height=400, border=False):
                 if os.path.exists(image_path):
@@ -187,9 +212,7 @@ for row_df in rows:
                         price = str(listing['price'])
                         html = f"""
                     <div style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-                        <a href="{listing['listing_url']}" target="_blank">
-                            <img src="data:image/jpeg;base64,{encoded_image}" style="width: 100%; border-radius: 10px; margin-bottom: 10px;" />
-                        </a>
+                        <img src="data:image/jpeg;base64,{encoded_image}" style="width: 100%; border-radius: 10px; margin-bottom: 10px; border: {border_style};" />
                         <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">
                             {price}
                         </div>
@@ -204,9 +227,7 @@ for row_df in rows:
                         price = float(str(listing['price']).replace("$", "").replace(",", "").strip())    
                         html = f"""
                     <div style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-                        <a href="{listing['listing_url']}" target="_blank">
-                            <img src="data:image/jpeg;base64,{encoded_image}" style="width: 100%; border-radius: 10px; margin-bottom: 10px;" />
-                        </a>
+                        <img src="data:image/jpeg;base64,{encoded_image}" style="width: 100%; border-radius: 10px; margin-bottom: 10px; border: {border_style};" />
                         <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">
                             ${price:,.2f}
                         </div>
@@ -219,15 +240,15 @@ for row_df in rows:
                     """
                     st.markdown(html, unsafe_allow_html=True)                 
 
-                # Checkbox outside the HTML so Streamlit can capture its state
-                st.session_state.batch_labels.setdefault(uid, None)
-                selected = st.checkbox('Likely Stolen', key=uid)
-                st.session_state.batch_labels[uid] = selected
+                # Capturing the state of the selected item
+                if st.button(label, key=f"btn_{uid}", type=button_type):
+                    st.session_state.batch_labels[uid] = not is_selected
+                    st.rerun()
 
 if "labels_submitted" not in st.session_state:
     st.session_state.labels_submitted = False
 
-col1, col2, col3, col4, col5, col6, col7 = st.columns([2,2,2,2,2, 2,2])
+col1, col2, col3, col4, col5, col6, col7 = st.columns([2,2,2,2.3,2, 2,2])
 with col4:
     if st.session_state.labels_submitted == False:
         if st.button("**✅ Submit Labels**", type="secondary"):
@@ -253,7 +274,7 @@ with col4:
             st.rerun()
     else:
         if st.button("✅ Submit Labels", type="secondary"):
-            st.success("Labels already submitted")
+            st.success("🎉 Labels resubmitted")
 
 with col6:
     if st.session_state.labels_submitted == True:
@@ -280,7 +301,7 @@ with col6:
 
 with col7:
     if st.session_state.labels_submitted == True:
-        if st.button("**➡️ Next Page**", type="secondary"):
+        if st.button("➡️ Next Page", type="secondary"):
             st.session_state.labels_submitted = False
             st.session_state.current_df = st.session_state.recent_labeled_df
             # st.session_state.recent_labeled_df = ""
@@ -292,7 +313,8 @@ if labeled < total:
     if st.button("💾 Save Progress", key="save_progress_bottom"):
         try:
             with st.spinner("Saving Progress...", show_time=True):
-                du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                df_tosave = st.session_state.recent_labeled_df
+                du.upload_csv(df_tosave, sel['drive_file'], sel['drive_folder_id'])
             st.success("Progress saved to Google Drive!")
 
             st.session_state.progress_saved = True
@@ -311,7 +333,8 @@ if st.button("⬅️ Back to Datasets"):
         if "progress_saved" not in st.session_state or st.session_state.progress_saved == False:
             try:
                 with st.spinner("Saving Progress...", show_time=True):
-                    du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                    df_tosave = st.session_state.recent_labeled_df
+                    du.upload_csv(df_tosave, sel['drive_file'], sel['drive_folder_id'])
                 st.success("Progress saved to Google Drive!")
                 st.session_state.label_submitted = False
                 st.session_state.progress_saved = True
