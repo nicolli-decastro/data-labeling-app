@@ -75,13 +75,10 @@ GDRIVE_KEY = """
 1. Go to your deployed app’s **Settings > Secrets**
 2. Add a new secret called `GDRIVE_KEY` and paste the full JSON content
 
----
-
 ## ✅ You're Done!
 
 Your app is now connected to your Drive and can read from and write to the shared folder.
 
----
 
 ## References
 
