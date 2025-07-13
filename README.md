@@ -22,6 +22,7 @@ A **Streamlit web application** designed for **retailers and researchers** to la
 
 ## Repository Structure
 
+```bash
 ├── app.py # Entry point of the app
 ├── drive_utils.py # Google Drive integration
 ├── requirements.txt # Dependencies
@@ -32,11 +33,6 @@ A **Streamlit web application** designed for **retailers and researchers** to la
 │ └── labeling_page.py
 └── Data/
 └── YYYY_MM_DD/ # Example dataset folder
-
-yaml
-Copy
-Edit
-
 ---
 
 ## Running the App Locally
@@ -53,6 +49,7 @@ Once your environment is set up, just run:
 
 ```bash
 streamlit run app.py
+---
 
 ## Cloud Deployment
 You can also deploy this app to the cloud using Streamlit Cloud:
