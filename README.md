@@ -1,24 +1,24 @@
 
-# 🏷️ Data Labeling App – Loss Detection for Retailers
+# Data Labeling App – Loss Detection for Retailers
 
 A **Streamlit web application** designed for retailers and researchers to label suspicious items from marketplaces (like Facebook Marketplace or Craigslist). The labeled data supports loss detection research by enabling structured annotation of potentially stolen items.
 
 
-## ✅ What This App Does
+## What This App Does
 
-- 🔐 Login system  
-- 🖼️ Batch labeling interface for images and listings  
-- 📊 CSV-based tracking for analysis  
-- ☁️ Google Drive integration for dataset storage and syncing  
-- 📄 Multipage layout using Streamlit’s native support  
+- Login system  
+- Batch labeling interface for images and listings  
+- CSV-based tracking for analysis  
+- Google Drive integration for dataset storage and syncing  
+- Multipage layout using Streamlit’s native support  
 
 
-## 🌐 What is Streamlit?
+## What is Streamlit?
 
 [Streamlit](https://streamlit.io/) is an open-source Python framework for building data apps quickly using only Python. It handles all the UI and backend logic automatically, making it ideal for small web tools like this labeling app.
 
 
-## 📦 Repository Structure
+## Repository Structure
 
 ```
 ├── app.py               # Entry point of the app  
@@ -33,7 +33,7 @@ A **Streamlit web application** designed for retailers and researchers to label 
     └── YYYY_MM_DD/      # Example dataset folder  
 ```
 
-## 🧪 Running the App Locally
+## Running the App Locally
 
 We recommend running this app locally using a **graphical interface** such as:
 
@@ -49,7 +49,7 @@ Once your environment is set up, run the app with:
 streamlit run app.py
 ```
 
-## ☁️ Cloud Deployment
+## Cloud Deployment
 
 You can also deploy this app to the cloud using **Streamlit Cloud**:
 
@@ -59,14 +59,14 @@ You can also deploy this app to the cloud using **Streamlit Cloud**:
 📘 [Streamlit Cloud Deployment Guide](https://docs.streamlit.io/streamlit-community-cloud/get-started/deploy-an-app)
 
 
-## 🔐 Google Drive API Setup
+## Google Drive API Setup
 
 This app uses a **Google Service Account** to read and write CSV and image metadata from your Drive.
 
 To enable that, follow this step-by-step guide:  
-📄 [Google Drive Setup Guide](./GDRIVE_SETUP.md)
+📘 [Google Drive Setup Guide](./GDRIVE_SETUP.md)
 
-## 📂 Adding New Data
+## Adding New Data
 
 To label your own data:
 
@@ -79,7 +79,7 @@ To label your own data:
 
 The app will automatically detect and load available folders.
 
-## 🧩 Streamlit Pages
+## Streamlit Pages
 
 Every `.py` file inside the `/pages` folder becomes a new page in the sidebar:
 
