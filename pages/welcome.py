@@ -61,7 +61,6 @@ with content_col:
                 range_miles = location_parts[-1]
 
                 drive_folder_id = du.get_folder_id_by_name(folder_name, parent_id=st.session_state.root_folder_id)
-                
                 if not drive_folder_id:
                     drive_folder_id = du.create_drive_folder(folder_name, st.session_state.root_folder_id)
 
@@ -84,13 +83,13 @@ with content_col:
                 if df is None:
                     df_original = pd.read_csv(csv_path)
                     df = df_original.copy()
+                    # Checks how many images actually exist with the file path from the photo_url column
+                    df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(str(x)))) if isinstance(x, str) or not pd.isna(x) else False)
+                    #df['image_exist'] = df['photo_url'].apply(lambda x: check_image_exists(x, images_folder))
 
                     df['user_name'] = pd.Series([pd.NA] * len(df), dtype="string")
                     df['binary_flag'] = pd.Series([pd.NA] * len(df), dtype="string")
                     df['timestamp'] = pd.Series([pd.NA] * len(df), dtype="string")
-
-                    # Checks how many images actually exist with the file path from the photo_url column
-                    df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(str(x)))) if isinstance(x, str) or not pd.isna(x) else False)
 
 
                 st.session_state[local_key] = df
