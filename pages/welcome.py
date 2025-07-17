@@ -30,7 +30,7 @@ with content_col:
     
     st.subheader("📜 Datasets")
 
-    header_cols = st.columns([1.2, 1, 1, 1, 0.8, 1.9,1.8])
+    header_cols = st.columns([1.2, 0.8, 1, 1, 0.8, 1.9,1.8])
     headers = ["City", "Range", "Date", "Labeled", "Total", "Action", "Download"]
     
     for col, label in zip(header_cols, headers):
@@ -61,21 +61,37 @@ with content_col:
                 range_miles = location_parts[-1]
 
                 drive_folder_id = du.get_folder_id_by_name(folder_name, parent_id=st.session_state.root_folder_id)
+                
                 if not drive_folder_id:
                     drive_folder_id = du.create_drive_folder(folder_name, st.session_state.root_folder_id)
 
                 labeled_file_id = du.get_file_id_by_name(file, drive_folder_id)
-                local_key = f"local_df_{file}"
+                date = folder_name.replace("_", "/")
+                local_key = f"local_df_{date}_{file}"
 
                 # If there is a df in the Drive download this csv and check again for any updates in the images in the folder
                 if labeled_file_id:
                     labeled_df = du.download_csv(file, drive_folder_id)
                     df = labeled_df.copy() if not labeled_df.empty else None
-                    # Checks for any update in the image folders in case new pictures were added or deleted
-                    df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(x))) if isinstance(x, str) else False)
-                    #df['image_exist'] = df['photo_url'].apply(lambda x: check_image_exists(x, images_folder))
 
-                    length = len(df[df['image_exist'] == True])
+                    if df is not None:
+                        # Ensure required columns exist
+                        if 'user_name' not in df.columns:
+                            df['user_name'] = pd.Series([pd.NA] * len(df), dtype="string")
+                        if 'binary_flag' not in df.columns:
+                            df['binary_flag'] = pd.Series([pd.NA] * len(df), dtype="string")
+                        if 'timestamp' not in df.columns:
+                            df['timestamp'] = pd.Series([pd.NA] * len(df), dtype="string")
+                        if 'image_exist' not in df.columns:
+                            df['image_exist'] = pd.Series([False] * len(df))
+
+                        # Update the image_exist column based on current images in folder
+                        df['image_exist'] = df['photo_url'].apply(
+                            lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(str(x))))
+                            if isinstance(x, str) or not pd.isna(x) else False
+                        )
+
+                        length = len(df[df['image_exist'] == True])
                 else:
                     df = None
 
@@ -83,14 +99,13 @@ with content_col:
                 if df is None:
                     df_original = pd.read_csv(csv_path)
                     df = df_original.copy()
-                    # Checks how many images actually exist with the file path from the photo_url column
-                    df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(str(x)))) if isinstance(x, str) or not pd.isna(x) else False)
-                    #df['image_exist'] = df['photo_url'].apply(lambda x: check_image_exists(x, images_folder))
 
                     df['user_name'] = pd.Series([pd.NA] * len(df), dtype="string")
                     df['binary_flag'] = pd.Series([pd.NA] * len(df), dtype="string")
                     df['timestamp'] = pd.Series([pd.NA] * len(df), dtype="string")
 
+                    # Checks how many images actually exist with the file path from the photo_url column
+                    df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(str(x)))) if isinstance(x, str) or not pd.isna(x) else False)
 
                 st.session_state[local_key] = df
 
@@ -101,28 +116,53 @@ with content_col:
                 if total == 0:
                     continue
                 else:
-                    col1, col2, col3, col4, col5, col6, col7 = st.columns([1.2, 1, 1, 1, 0.8, 1.9,1.8])
+                    col1, col2, col3, col4, col5, col6, col7 = st.columns([1.2, 0.8, 1, 1, 0.8, 1.9,1.8])
                     with col1: st.write(location)
                     with col2: st.write(range_miles)
-                    with col3: st.write(folder_name.replace("_", "/"))
-                    with col4: st.write(labeled if file_in_drive else 0)
+                    with col3: st.write(f"**{date}**")
+                    with col4:
+                        st.markdown(f"""
+                            <div style="
+                                display: flex;
+                                margin-left: 5px;
+                                align-items: center;
+                                height: 100%;  /* Optional: define height if vertical centering isn't working */
+                            ">
+                                {labeled if file_in_drive else 0}
+                            </div>
+                        """, unsafe_allow_html=True)
                     with col5: st.write(total)
                     with col6:
                         key = f"select_{folder_name}_{file}"
-                        if not file_in_drive:
+                        if not file_in_drive or labeled == 0:
                             if st.button("🚀 Start Labeling", key=key):
-                                du.upload_csv(df, file, drive_folder_id)
-                                st.session_state.selected_dataset = {
-                                    "csv_path": csv_path,
-                                    "images_folder": images_folder,
-                                    "folder_name": folder_name,
-                                    "location": location,
-                                    "range": range_miles,
-                                    "drive_file": file,
-                                    "drive_folder_id": drive_folder_id
-                                }
-                                st.session_state.current_df = df
-                                st.switch_page("pages/labeling_page.py")
+                                try:
+                                    du.upload_csv(df, file, drive_folder_id)
+                                    st.session_state.selected_dataset = {
+                                        "csv_path": csv_path,
+                                        "images_folder": images_folder,
+                                        "folder_name": folder_name,
+                                        "location": location,
+                                        "range": range_miles,
+                                        "drive_file": file,
+                                        "drive_folder_id": drive_folder_id
+                                    }
+                                    st.session_state.current_df = df
+                                    st.switch_page("pages/labeling_page.py")
+
+                                except Exception as e:
+                                    if (
+                                        hasattr(e, "resp") 
+                                        and hasattr(e, "content") 
+                                        and "storageQuotaExceeded" in str(e.content)
+                                    ):
+                                        st.warning(
+                                            f"⚠️ File **{file}** missing from Google Drive: Please add this CSV to the folder **{folder_name}**."
+                                        )
+                                else:
+                                    st.error("An unexpected error occurred during upload.")
+                                    st.exception(e)
+
                         elif labeled == total and total > 0:
                             st.button("✅ Complete", key=key, disabled=True)
                         else:
@@ -145,9 +185,8 @@ with content_col:
                                 data=csv_bytes,
                                 file_name=file,
                                 mime="text/csv",
-                                key=f"download_{file}"
-                            )
-            
+                                key=f"download_{date}_{file}"
+                            )            
         st.divider()
         if st.button("🔒 Logout"):
             for key in list(st.session_state.keys()):

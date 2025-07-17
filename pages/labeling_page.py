@@ -40,15 +40,17 @@ with col3:
     if st.button("💾 Save Progress", key="save_progress_side"):
         try:
             with st.spinner("Saving Progress...", show_time=True):
-                du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
-            st.success("Progress saved to Google Drive!")
-            st.session_state.progress_saved = True
+                # labels_submmited initiated and equalts True
+                if "labels_submitted" in st.session_state and st.session_state.labels_submitted == True:
+                    if "recent_labeled_df" in st.session_state:
+                        df_tosave = st.session_state.recent_labeled_df
+                        du.upload_csv(df_tosave, sel['drive_file'], sel['drive_folder_id'])
+                        st.success("Progress saved to Google Drive!")
+                        st.session_state.progress_saved = True
         except Exception as e:
             st.error(f"Failed to upload: {e}")
-    
 
 if "current_df" not in st.session_state:
-    st.header("Current df not in the system")
     st.session_state.current_df = du.download_csv(sel['drive_file'], sel['drive_folder_id'])
 
 df = st.session_state.current_df
@@ -118,7 +120,7 @@ st.markdown("<hr style='margin:1px 0;' />", unsafe_allow_html=True)
 items_per_page = 25
 total_pages = math.ceil(total / items_per_page)  # ceiling division
 
-# Finding the page number
+# Finding the current page number
 page_calculation = math.ceil(labeled / items_per_page) + 1
 
 if page_calculation > total_pages:
@@ -192,7 +194,7 @@ for row_df in rows:
 
             # Create the border status for each listing co
             if st.session_state.batch_labels[uid] == True:
-                border_style = "4px solid steelblue"
+                border_style = "8px solid steelblue"
             else:
                 border_style = "4px solid white"
 
@@ -200,7 +202,7 @@ for row_df in rows:
             
             # Capturing the state of the selected item
 
-            with col.container(height=400, border=False):
+            with col.container(height=440, border=False):
                 if os.path.exists(image_path):
 
                     # Read image file in binary mode
@@ -212,7 +214,7 @@ for row_df in rows:
                         price = str(listing['price'])
                         html = f"""
                     <div style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-                        <img src="data:image/jpeg;base64,{encoded_image}" style="width: 100%; border-radius: 10px; margin-bottom: 10px; border: {border_style};" />
+                        <img src="data:image/jpeg;base64,{encoded_image}" style="width: 100%; border-radius: 10px; margin-bottom: 6px; border: {border_style};" />
                         <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">
                             {price}
                         </div>
@@ -251,7 +253,7 @@ if "labels_submitted" not in st.session_state:
 col1, col2, col3, col4, col5, col6, col7 = st.columns([2,2,2,2.3,2, 2,2])
 with col4:
     if st.session_state.labels_submitted == False:
-        if st.button("**✅ Submit Labels**", type="secondary"):
+        if st.button("✅ Submit Labels", type="secondary"):
             listing = 0
             # Copying original dataframe 
             copy_df  = df.copy(deep=True)
@@ -313,8 +315,9 @@ if labeled < total:
     if st.button("💾 Save Progress", key="save_progress_bottom"):
         try:
             with st.spinner("Saving Progress...", show_time=True):
-                df_tosave = st.session_state.recent_labeled_df
-                du.upload_csv(df_tosave, sel['drive_file'], sel['drive_folder_id'])
+                if "recent_labeled_df" in st.session_state:
+                    df_tosave = st.session_state.recent_labeled_df
+                    du.upload_csv(df_tosave, sel['drive_file'], sel['drive_folder_id'])
             st.success("Progress saved to Google Drive!")
 
             st.session_state.progress_saved = True
@@ -333,8 +336,9 @@ if st.button("⬅️ Back to Datasets"):
         if "progress_saved" not in st.session_state or st.session_state.progress_saved == False:
             try:
                 with st.spinner("Saving Progress...", show_time=True):
-                    df_tosave = st.session_state.recent_labeled_df
-                    du.upload_csv(df_tosave, sel['drive_file'], sel['drive_folder_id'])
+                    if "recent_labeled_df" in st.session_state:
+                        df_tosave = st.session_state.recent_labeled_df
+                        du.upload_csv(df_tosave, sel['drive_file'], sel['drive_folder_id'])
                 st.success("Progress saved to Google Drive!")
                 st.session_state.label_submitted = False
                 st.session_state.progress_saved = True
@@ -351,7 +355,9 @@ with st.popover("🔒 Logout",):
         print("Button save and logout clicked")
         try:
             with st.spinner("Saving Progress...", show_time=True):
-                du.upload_csv(df.copy(), sel['drive_file'], sel['drive_folder_id'])
+                if "recent_labeled_df" in st.session_state:
+                    df_tosave = st.session_state.recent_labeled_df
+                    du.upload_csv(df_tosave, sel['drive_file'], sel['drive_folder_id'])
             st.success("Progress saved to Google Drive!")
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
