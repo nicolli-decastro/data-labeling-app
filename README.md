@@ -74,10 +74,20 @@ To label your own data:
 2. Include:
    - A CSV with item metadata
    - Corresponding image files
+   - Ensure the CSV includes a column with file names or paths that match the image files inside the subfolder
 3. Push the folder to your GitHub repo (if deploying),  
    or place it in your local file system if running locally.
 
-The app will automatically detect and load available folders.
+📌 Important:
+The only supported way to add data is by pushing it to the GitHub repository using Git.
+Do not upload files using GitHub’s web interface, as it cannot handle:
+- Large image file sizes
+- A high number of files
+- Folder structures properly
+
+Also, storing images on Google Drive is not recommended due to API rate limits and delayed file access.
+
+If you’re running the app locally, place the folder directly in your local Data/ directory. The app will automatically detect and display datasets that follow this structure.
 
 ## Streamlit Pages
 
