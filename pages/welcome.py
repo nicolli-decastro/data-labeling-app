@@ -48,6 +48,8 @@ with content_col:
             for file in os.listdir(folder_path):
                 # Skip dataset if its images folder doesn't exist
                 images_folder = os.path.join(folder_path, file.replace(".csv", "_files"))
+                print(images_folder)
+
                 if not os.path.exists(images_folder):
                     continue
                 if not file.endswith(".csv"):
@@ -56,9 +58,17 @@ with content_col:
                 csv_path = os.path.join(folder_path, file)
                 images_folder = os.path.join(folder_path, file.replace(".csv", "_files"))
 
+                # New logic to support merged/national datasets
                 location_parts = file.replace(".csv", "").split("_")
-                location = " ".join(location_parts[:-1]).title()
-                range_miles = location_parts[-1]
+
+                if len(location_parts) >= 3 and location_parts[-1].endswith("mi"):
+                    # Standard city_state_miles format
+                    location = " ".join(location_parts[:-1]).title()
+                    range_miles = location_parts[-1]
+                else:
+                    # Fallback for merged or national datasets
+                    location = " ".join(location_parts).title()
+                    range_miles = "Merged"
 
                 drive_folder_id = du.get_folder_id_by_name(folder_name, parent_id=st.session_state.root_folder_id)
                 
@@ -84,12 +94,30 @@ with content_col:
                             df['timestamp'] = pd.Series([pd.NA] * len(df), dtype="string")
                         if 'image_exist' not in df.columns:
                             df['image_exist'] = pd.Series([False] * len(df))
+                        
+                        # Create a set of all image filenames in the folder
+                        image_files = set(os.listdir(images_folder))
 
-                        # Update the image_exist column based on current images in folder
-                        df['image_exist'] = df['photo_url'].apply(
-                            lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(str(x))))
-                            if isinstance(x, str) or not pd.isna(x) else False
-                        )
+                        print("📸 First 5 photo_url values from CSV:")
+                        print(df['photo_url'].dropna().head().to_list())
+
+                        print("🗂️ First 5 files from image folder:")
+                        print(list(image_files)[:5])
+
+                        def match_image_exists(photo_url):
+                            if not isinstance(photo_url, str) or pd.isna(photo_url):
+                                return False
+
+                            photo_name = os.path.basename(photo_url).strip()
+
+                            # DEBUG: Check sample match attempts
+                            for img in image_files:
+                                if img.endswith(photo_name):
+                                    return True
+                            return False
+
+                        df['image_exist'] = df['photo_url'].apply(match_image_exists)
+                        print(f"Number of images that are matched: {len(df[df['image_exist'] == True])}")
 
                         length = len(df[df['image_exist'] == True])
                 else:
@@ -104,8 +132,23 @@ with content_col:
                     df['binary_flag'] = pd.Series([pd.NA] * len(df), dtype="string")
                     df['timestamp'] = pd.Series([pd.NA] * len(df), dtype="string")
 
-                    # Checks how many images actually exist with the file path from the photo_url column
-                    df['image_exist'] = df['photo_url'].apply(lambda x: os.path.exists(os.path.join(images_folder, os.path.basename(str(x)))) if isinstance(x, str) or not pd.isna(x) else False)
+                    # Create a set of all image filenames in the folder
+                    image_files = set(os.listdir(images_folder))
+
+                    def match_image_exists(photo_url):
+                        if not isinstance(photo_url, str) or pd.isna(photo_url):
+                            return False
+
+                        photo_name = os.path.basename(photo_url).strip()
+
+                        # DEBUG: Check sample match attempts
+                        for img in image_files:
+                            if img.endswith(photo_name):
+                                return True
+                        return False
+
+                    df['image_exist'] = df['photo_url'].apply(match_image_exists)
+                    print(f"Number of images that are matched: {len(df[df['image_exist'] == True])}")
 
                 st.session_state[local_key] = df
 
@@ -117,7 +160,7 @@ with content_col:
                     continue
                 else:
                     col1, col2, col3, col4, col5, col6, col7 = st.columns([1.2, 0.8, 1, 1, 0.8, 1.9,1.8])
-                    with col1: st.write(location)
+                    with col1: st.write(f"**{location}**")
                     with col2: st.write(range_miles)
                     with col3: st.write(f"**{date}**")
                     with col4:
