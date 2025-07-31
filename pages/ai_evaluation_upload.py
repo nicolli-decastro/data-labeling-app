@@ -48,6 +48,10 @@ username = st.session_state.user_username
 base_path = os.path.join("uploaded_data", username)
 os.makedirs(base_path, exist_ok=True)
 
+# --- Find current CSV and ZIP (one of each max) ---
+existing_csvs = glob.glob(os.path.join(base_path, "*.csv"))
+existing_zips = glob.glob(os.path.join(base_path, "*.zip"))
+
 # Detect existing CSV and ZIP
 # Exclude any CSVs that are model result files
 csv_files = [
@@ -72,20 +76,19 @@ zip_filename = os.path.basename(zip_path) if zip_exists else None
 result_csv_pattern = os.path.join(base_path, "*model_results*.csv")
 result_files = glob.glob(result_csv_pattern)
 
+if csv_exists:
+    # Step 1: Load the original CSV
+    df_original = pd.read_csv(csv_path)
+    total_original = len(df_original)
+
 df_result = None
 if result_files:
-    # Sort by modified time (latest last)
+    # Load the results file if exist and compare results
     result_files.sort(key=os.path.getmtime)
     latest_result_csv = result_files[-1]
     df_result = pd.read_csv(latest_result_csv)
-
-if csv_exists:
-    # Step 2: Load the original CSV to compare
-    df_original = pd.read_csv(csv_path)
-    total_original = len(df_original)
     labeled_count = len(df_result)
     remaining = total_original - labeled_count
-
 
 # -- ACTUAL PAGE CONTENT STARTS
 
@@ -153,7 +156,7 @@ with col2:
                     </p>
                 </div>"""
 
-            if latest_result_csv and total_original:
+            if result_files and csv_exists:
                 st.warning(f"⚠️ Found an AI result file: {os.path.basename(latest_result_csv)}  with {labeled_count} listings evaluated out of {total_original} by the AI model. If you upload a new file the current progress will be lost!")
 
             new_csv = st.file_uploader("Upload CSV", type=["csv"], key="csv")
@@ -220,7 +223,8 @@ with col2:
                     with st.spinner("🔧 Extracting images..."):
                         with zipfile.ZipFile(zip_path, "r") as zip_ref:
                             zip_ref.extractall(images_folder)
-                        st.success(f"✅ Extracted {len(zip_ref.namelist())} images to `{images_folder}`")
+                            number_images = len(zip_ref.namelist()) - 1 # minus 1 is because the unzipped file is a nested folder, folder extracted_images > original zipped folder name > images as .png or .jpg 
+                        st.success(f"✅ Extracted {number_images} images")
                         images_extracted = True
                 except zipfile.BadZipFile:
                     st.error("🚫 Uploaded ZIP file is invalid.")
@@ -272,18 +276,9 @@ with col2:
         col1, col2, col3, col4 = st.columns([2,0.5,1.5,0.5])
 
         with col3:
-            with st.container(border=True):
+            if result_files:
+                with st.container(border=True):
 
-                if total_original:
-                    total_listings = total_original
-                    if result_files:
-                        total_labeled = labeled_count
-                        left_label = total_listings - total_labeled
-                    else:
-                        total_labeled = 0
-                        left_label = total_listings
-
-                if result_files:
                     st.markdown(f"""
                         <div style="
                             text-align: center;
@@ -291,16 +286,15 @@ with col2:
                             font-size: 18px;
                         ">
                             <div style="font-weight: 600; font-size: 20px;">
-                                ✅ <span style="color:#262730;">{total_labeled:,}</span> of <span style="color:#262730;">{total_listings:,}</span> listings processed
+                                ✅ <span style="color:#262730;">{labeled_count:,}</span> of <span style="color:#262730;">{total_original:,}</span> listings processed
                             </div>
                             <div style="margin-bottom: 0.5rem; color: #666;">
-                                {"✅ <b>All listings processed.</b>" if left_label == 0 else f"⏳ <b>{left_label:,}</b> remaining"}
+                                {"✅ <b>All listings processed.</b>" if remaining == 0 else f"⏳ <b>{remaining:,}</b> remaining"}
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
-
-                else:
-                    st.warning("⚠️ No AI result file found yet. You can run the AI model to begin labeling.")
+            else:
+                st.warning("⚠️ No AI result file found yet. You can run the AI model to begin labeling.")
 
         with col1:
             max_to_process = st.number_input(
