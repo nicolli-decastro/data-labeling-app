@@ -65,8 +65,8 @@ csv_path = os.path.join(base_path, csv_files[0]) if csv_exists else None
 zip_path = os.path.join(base_path, zip_files[0]) if zip_exists else None
 
 # -- FIND FILE NAMES         
-csv_filename = os.path.basename(csv_path)
-zip_filename = os.path.basename(zip_path)
+csv_filename = os.path.basename(csv_path) if csv_exists else None
+zip_filename = os.path.basename(zip_path) if zip_exists else None
 
 # --- Search for any result CSV file ---
 result_csv_pattern = os.path.join(base_path, "*model_results*.csv")
@@ -79,6 +79,7 @@ if result_files:
     latest_result_csv = result_files[-1]
     df_result = pd.read_csv(latest_result_csv)
 
+if csv_exists:
     # Step 2: Load the original CSV to compare
     df_original = pd.read_csv(csv_path)
     total_original = len(df_original)
@@ -152,7 +153,8 @@ with col2:
                     </p>
                 </div>"""
 
-            st.warning(f"⚠️ Found an AI result file: {os.path.basename(latest_result_csv)}  with {labeled_count} listings evaluated out of {total_original} by the AI model. If you upload a new file the current progress will be lost!")
+            if latest_result_csv and total_original:
+                st.warning(f"⚠️ Found an AI result file: {os.path.basename(latest_result_csv)}  with {labeled_count} listings evaluated out of {total_original} by the AI model. If you upload a new file the current progress will be lost!")
 
             new_csv = st.file_uploader("Upload CSV", type=["csv"], key="csv")
 
@@ -271,6 +273,16 @@ with col2:
 
         with col3:
             with st.container(border=True):
+
+                if total_original:
+                    total_listings = total_original
+                    if result_files:
+                        total_labeled = labeled_count
+                        left_label = total_listings - total_labeled
+                    else:
+                        total_labeled = 0
+                        left_label = total_listings
+
                 if result_files:
                     st.markdown(f"""
                         <div style="
@@ -279,10 +291,10 @@ with col2:
                             font-size: 18px;
                         ">
                             <div style="font-weight: 600; font-size: 20px;">
-                                ✅ <span style="color:#262730;">{labeled_count:,}</span> of <span style="color:#262730;">{total_original:,}</span> listings processed
+                                ✅ <span style="color:#262730;">{total_labeled:,}</span> of <span style="color:#262730;">{total_listings:,}</span> listings processed
                             </div>
                             <div style="margin-bottom: 0.5rem; color: #666;">
-                                {"✅ <b>All listings processed.</b>" if remaining == 0 else f"⏳ <b>{remaining:,}</b> remaining"}
+                                {"✅ <b>All listings processed.</b>" if left_label == 0 else f"⏳ <b>{left_label:,}</b> remaining"}
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
