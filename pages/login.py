@@ -6,8 +6,6 @@ import re
 from datetime import datetime
 import drive_utils as du
 
-st.set_page_config(page_title="Login", layout="centered")
-
 # Hide the sidebar completely
 hide_sidebar = """
     <style>
@@ -16,6 +14,8 @@ hide_sidebar = """
     </style>
 """
 st.markdown(hide_sidebar, unsafe_allow_html=True)
+
+st.set_page_config(page_title="Login", layout="centered")
 
 # Google Drive config
 ROOT_FOLDER_NAME = 'LabelingAppData'

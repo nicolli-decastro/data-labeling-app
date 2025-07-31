@@ -92,11 +92,12 @@ def upload_csv(df, file_name, folder_id):
     media = MediaFileUpload(file_name, mimetype='text/csv')
 
     if file_id:
-        drive_service.files().update(fileId=file_id, media_body=media).execute()
+        drive_service.files().update(fileId=file_id, media_body=media,supportsAllDrives=True).execute()
     else:
         drive_service.files().create(
             body={'name': file_name, 'parents': [folder_id]},
-            media_body=media
+            media_body=media,
+            supportsAllDrives=True
         ).execute()
 
 def get_image_file_id(image_name, image_folder_id):

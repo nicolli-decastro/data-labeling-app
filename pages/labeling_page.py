@@ -10,20 +10,44 @@ import math
 # import streamlit_extras
 # from streamlit_extras.let_it_rain import rain
 
-st.set_page_config(page_title="Labeling App", layout="wide")
+# -- SIDE BAR CONFIGURATION
 
-# Hide the sidebar completely
-hide_sidebar = """
-    <style>
-        [data-testid="stSidebar"] {display: none;}
-        [data-testid="stSidebarNav"] {display: none;}
-    </style>
+hide_streamlit_nav_spacing = """
+<style>
+/* Reduce top padding */
+section[data-testid="stSidebar"] > div:first-child {
+    padding-top: 0rem;
+}
+
+/* Hide default search / nav items */
+[data-testid="stSidebarNavItems"], [data-testid="stSidebarNav"] {
+    display: none;
+}
+</style>
 """
-st.markdown(hide_sidebar, unsafe_allow_html=True)
+st.markdown(hide_streamlit_nav_spacing, unsafe_allow_html=True)
+
+# Sidebar Navigation with Links
+st.sidebar.markdown("## Navigation")
+st.sidebar.page_link("pages/welcome.py", label="Home Page")
+st.sidebar.page_link("pages/database_label.py", label="Data for Label")
+st.sidebar.page_link("pages/data_visualization.py", label="Data Visualization")
+st.sidebar.page_link("pages/ai_evaluation_upload.py", label="AI-Tool")
+st.sidebar.button("Logout", use_container_width=True)
+
+# If Logout is clicked
+if st.session_state.get("logout", False):
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    st.rerun()
+
+# -- PAGE START
+
+st.set_page_config(page_title="Labeling App", layout="wide")
 
 if "selected_dataset" not in st.session_state:
     st.warning("Please select a dataset first.")
-    st.switch_page("pages/welcome.py")
+    st.switch_page("pages/database_label.py")
     st.stop()
 
 sel = st.session_state.selected_dataset
@@ -176,7 +200,19 @@ for row_df in rows:
         if idx < len(row_df):
             listing = row_df.iloc[idx]
             uid = f"{listing['listing_url']}__{listing['photo_url']}"
-            image_name = os.path.basename(listing['photo_url'])
+
+            import re
+
+            # Extract only the final part of the image name
+            full_name = os.path.basename(listing['photo_url'])
+            match = re.search(r'(\d+_\d+_?\d*)_n\.(jpg|jpeg|png|webp|bmp)$', full_name)
+
+            if match:
+                image_name = f"{match.group(1)}_n.{match.group(2)}"
+            else:
+                image_name = full_name  # fallback in case regex fails
+
+
             image_path = os.path.join(sel['images_folder'], image_name)
 
             # Checkbox outside the HTML so Streamlit can capture its state
@@ -331,7 +367,7 @@ if st.button("⬅️ Back to Datasets"):
     # print("Status of progress saved: ", st.session_state.progress_saved)
     # if st.session_state.progress_saved == False:
     if "recent_labeled_df" not in st.session_state:
-        st.switch_page("pages/welcome.py")
+        st.switch_page("pages/database_label.py")
     else:
         if "progress_saved" not in st.session_state or st.session_state.progress_saved == False:
             try:
@@ -343,11 +379,11 @@ if st.button("⬅️ Back to Datasets"):
                 st.session_state.label_submitted = False
                 st.session_state.progress_saved = True
                 del st.session_state.selected_dataset
-                st.switch_page("pages/welcome.py")
+                st.switch_page("pages/database_label.py")
             except Exception as e:
                 st.error(f"Failed to upload: {e}")
         else:
-            st.switch_page("pages/welcome.py")
+            st.switch_page("pages/database_label.py")
 
 # Ask user if they want to save progress before logout
 with st.popover("🔒 Logout",):
