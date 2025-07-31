@@ -5,7 +5,7 @@ google-auth
 google-auth-httplib2
 google-auth-oauthlib
 plotly.express
-plotly.graph_objects
+plotly>=5.0
 geopy
 tiktoken
 google-generativeai
