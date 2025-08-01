@@ -49,17 +49,15 @@ def call_generate(model, img_bytes, prompt):
         ]
     )
 
-def run_model(input_csv: str, image_folder: str, output_path: str, max_to_process: int = None):
+def run_model(input_csv: str, image_folder: str, output_path: str, rows_labeled: int, max_to_process: int = None):
     config.INPUT_CSV = input_csv
     config.PHOTO_DIR = image_folder
     config.OUTPUT_CSV = output_path
+    config.ROWS_LABELED = rows_labeled
     config.MAX_TO_PROCESS = max_to_process
 
     print("Function main being called")
     main()  # run main function
-
-    # df_results = pd.read_csv(output_path)  # load whatever was written
-    # df_results.to_csv(config.OUTPUT_CSV, index=False)
     
     print("Run Model completed successfully!")
 
@@ -68,16 +66,25 @@ def main():
 
     print("Function main called")
 
-    # Where the output file will be placed
     output_filename = config.OUTPUT_CSV
 
-    processed = 0
-    
-    # Creating output file in the correct place from the output_path
+    print("Reading from:", output_filename)
+
+    # --- Step 1: Determine how many rows already exist ---
+    rows_labeled = config.ROWS_LABELED
+
+    # --- Step 2: Process input and append to output ---
     with open(config.INPUT_CSV, newline='', encoding='utf-8') as inf, \
-         open(output_filename, 'w', newline='', encoding='utf-8') as outf:
+         open(output_filename, 'a', newline='', encoding='utf-8') as outf:
 
         reader = csv.DictReader(inf)
+        for _ in range(rows_labeled):
+            next(reader, None)
+        
+        print(f"🔁 Skipping {rows_labeled} already-labeled rows.")
+
+        processed = 0
+
         fieldnames = reader.fieldnames + [
             'model_name',
             'reasoning',
@@ -93,8 +100,10 @@ def main():
             'completion_tokens',
             'total_tokens'
         ]
+
+        print("Appending to:", output_filename)
+
         writer = csv.DictWriter(outf, fieldnames=fieldnames)
-        writer.writeheader()
 
         executor = ThreadPoolExecutor(max_workers=1)
 
@@ -117,11 +126,9 @@ def main():
                 continue
 
             img_path = matches[0]  # Use the first match found
-
             idx        = processed % len(models)
             model      = models[idx]
             model_name = config.VISION_MODELS[idx]
-
             prompt = build_prompt(title, category, price)
             prompt_tokens = len(encoder.encode(prompt))
 

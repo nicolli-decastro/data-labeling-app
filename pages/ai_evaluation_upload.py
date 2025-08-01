@@ -59,22 +59,27 @@ csv_files = [
     if f.endswith(".csv") and "model_results" not in f
 ]
 zip_files = [f for f in os.listdir(base_path) if f.endswith(".zip")]
+result_file = [
+    f for f in os.listdir(base_path)
+    if f.endswith(".csv") and "model_results" in f
+]
 
 # -- CHECK IF FILES EXIST
 csv_exists = len(csv_files) > 0
 zip_exists = len(zip_files) > 0
+result_exists = len(result_file) > 0
+st.markdown(f"Number of csv: {len(csv_files)}, # zipped files: {len(zip_files)}, # result files: {len(result_file)}")
 
 # -- FIND FILE PATHS
 csv_path = os.path.join(base_path, csv_files[0]) if csv_exists else None
 zip_path = os.path.join(base_path, zip_files[0]) if zip_exists else None
+result_path = os.path.join(base_path, result_file[0]) if result_exists else None
 
 # -- FIND FILE NAMES         
 csv_filename = os.path.basename(csv_path) if csv_exists else None
 zip_filename = os.path.basename(zip_path) if zip_exists else None
-
-# --- Search for any result CSV file ---
-result_csv_pattern = os.path.join(base_path, "*model_results*.csv")
-result_files = glob.glob(result_csv_pattern)
+result_filename = os.path.basename(result_path) if result_exists else None
+st.markdown(f"### result csv path: {result_path}, result filename: {result_filename}")
 
 if csv_exists:
     # Step 1: Load the original CSV
@@ -82,11 +87,9 @@ if csv_exists:
     total_original = len(df_original)
 
 df_result = None
-if result_files:
+if result_exists:
     # Load the results file if exist and compare results
-    result_files.sort(key=os.path.getmtime)
-    latest_result_csv = result_files[-1]
-    df_result = pd.read_csv(latest_result_csv)
+    df_result = pd.read_csv(result_path)
     labeled_count = len(df_result)
     remaining = total_original - labeled_count
 
@@ -156,8 +159,8 @@ with col2:
                     </p>
                 </div>"""
 
-            if result_files and csv_exists:
-                st.warning(f"⚠️ Found an AI result file: {os.path.basename(latest_result_csv)}  with {labeled_count} listings evaluated out of {total_original} by the AI model. If you upload a new file the current progress will be lost!")
+            if result_exists and csv_exists:
+                st.warning(f"⚠️ Found an AI result file: {result_path}  with {labeled_count} listings evaluated out of {total_original} by the AI model. If you upload a new file the current progress will be lost!")
 
             new_csv = st.file_uploader("Upload CSV", type=["csv"], key="csv")
 
@@ -176,7 +179,7 @@ with col2:
                 
                 st.success(f"✅ New CSV saved as `{new_csv.name}`")
 
-            # --- Step 5: Validate CSV if uploaded ---
+            # --- Validate CSV if uploaded ---
             if csv_exists:
                 try:
                     df = pd.read_csv(csv_path)
@@ -265,8 +268,11 @@ with col2:
     # --- Final Check: Ready to run AI ---
     if csv_exists and images_extracted and "image_exists" in df.columns:
 
-        df_original = pd.read_csv(csv_path)
-        total_rows = len(df_original)
+        # Keep only listings with images that exists
+        df_to_evaluate = df[df["image_exists"] == True]
+
+        # Number of total listings that have images to be evaluated
+        total_rows = len(df_to_evaluate)
 
         st.markdown("## 🤖 Ready to Run AI Model")
         st.success("All inputs are validated. You can now run the AI model to evaluate the listings.")
@@ -276,7 +282,7 @@ with col2:
         col1, col2, col3, col4 = st.columns([2,0.5,1.5,0.5])
 
         with col3:
-            if result_files:
+            if result_exists:
                 with st.container(border=True):
 
                     st.markdown(f"""
@@ -306,11 +312,14 @@ with col2:
 
             if st.button("🚀 Run AI Model on Listings"):
 
-                # Build filename using original CSV name
-                original_name = os.path.splitext(os.path.basename(csv_path))[0]
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                result_filename = f"{original_name}_model_results_{timestamp}.csv"
-                result_path = os.path.join(base_path, result_filename)
+                # Only create a result path in case one already does not exist
+                print(f"Result file exists?? {result_exists}")
+                if result_exists == False:
+                    # Build filename using original CSV name
+                    original_name = os.path.splitext(os.path.basename(csv_path))[0]
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    result_filename = f"{original_name}_model_results_{timestamp}.csv"
+                    result_path = os.path.join(base_path, result_filename)
 
                 # Save empty CSV with only headers (this line is essential)
                 df_original.head(0).to_csv(result_path, index=False)
@@ -318,16 +327,24 @@ with col2:
                 with st.spinner("Running model... this may take a few minutes ⏳"):
                     try:
 
+                        numb_rows_labeled = labeled_count if result_exists else 0
+
                         # Run your model
-                        run_model(csv_path, images_folder, result_path, max_to_process=max_to_process)
+                        run_model(csv_path, images_folder, result_path, numb_rows_labeled, max_to_process=max_to_process)
 
-                        st.success("✅ Model completed successfully!")
+                        st.session_state.model_success = True
 
-                        with open(result_path, "rb") as f:
-                            st.download_button("📥 Download Results", data=f, file_name=result_filename)
+                        st.rerun()
 
                     except Exception as e:
                         st.error(f"🚫 Error running model: {e}")
+                        st.session_state.model_success = False
+            
+            if "model_success" in st.session_state:
+                if st.session_state.model_success == True:
+                    st.success("✅ Model completed successfully!")
+                    with open(result_path, "rb") as f:
+                        st.download_button("📥 Download Results", data=f, file_name=result_filename)
     else:
         st.warning("⚠️ Upload a valid CSV and ZIP file with matching images to enable model execution.")
 

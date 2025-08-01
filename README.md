@@ -1,16 +1,18 @@
 
 # Data Labeling App – Loss Detection for Retailers
 
-A **Streamlit web application** designed for retailers and researchers to label suspicious items from marketplaces (like Facebook Marketplace or Craigslist). The labeled data supports loss detection research by enabling structured annotation of potentially stolen items.
+A Streamlit web application designed for retailers and researchers to label and evaluate potentially stolen marketplace listings (e.g., from Facebook Marketplace or Craigslist). This platform supports loss prevention efforts by enabling structured annotation, AI-driven analysis, and visual data exploration.
 
 
 ## What This App Does
 
-- Login system  
-- Batch labeling interface for images and listings  
-- CSV-based tracking for analysis  
-- Google Drive integration for dataset storage and syncing  
-- Multipage layout using Streamlit’s native support  
+Login System for secure access
+
+- Manual Labeling of listings with CSV export
+- AI Evaluation to flag suspicious items and resume interrupted runs
+- Data Visualization to explore trends and insights 
+- Google Drive Integration for syncing datasets and results
+- Multipage Navigation with session tracking and upload management
 
 
 ## What is Streamlit?
@@ -21,16 +23,30 @@ A **Streamlit web application** designed for retailers and researchers to label 
 ## Repository Structure
 
 ```
-├── app.py               # Entry point of the app  
-├── drive_utils.py       # Google Drive integration  
-├── requirements.txt     # Dependencies  
-├── .streamlit/          # Secrets (e.g., GDRIVE_KEY)  
-├── pages/               
-│   ├── login.py         
-│   ├── welcome.py       
-│   └── labeling_page.py 
-└── Data/                
-    └── YYYY_MM_DD/      # Example dataset folder  
+├── app.py                       # Main entry point for the Streamlit app  
+├── drive_utils.py               # Google Drive API integration  
+├── requirements.txt             # Python dependencies  
+├── .streamlit/                  # Secrets (e.g., GDRIVE_KEY, API_KEYS) for local use only
+│   └── secrets.toml             
+├── AI_Model_Files/              # AI model-related logic
+│   ├── config.py
+│   └── label_Machine_test.py    
+├── uploaded_data/               # User-specific uploaded files and output
+│   └── <user_name>/
+│       ├── listings_to_evaluate.csv  
+│       ├── images.zip
+│       ├── extracted_images/
+│       │   └── <image files>
+│       └── listings_model_results_<timestamp>.csv
+├── pages/                       # Streamlit multipage layout
+│   ├── ai_evaluation_upload.py
+│   ├── data_visualization.py
+│   ├── database_label.py
+│   ├── labeling_page.py
+│   ├── login.py       
+│   └── welcome.py       
+└── Data/                        # Example datasets
+    └── YYYY_MM_DD/              # Folder by date (e.g., 2025_02_20)
 ```
 
 ## Running the App Locally
@@ -48,6 +64,22 @@ Once your environment is set up, run the app with:
 ```bash
 streamlit run app.py
 ```
+
+### 🔐 Required: API Keys Setup
+Before running the app, you must create a hidden .streamlit folder in the root directory of the project. Inside this folder, add a file named secrets.toml containing your API keys:
+
+```bash
+# .streamlit/secrets.toml
+
+# Example secrets.toml structure
+API_KEYS = ["your-api-keys", ...]
+GDRIVE_KEY = """{
+  "type": ...
+  }
+
+```
+
+⚠️ Make sure this file is not committed to your repository. Add .streamlit/secrets.toml to your .gitignore file to keep your credentials safe.
 
 ## Cloud Deployment
 
