@@ -27,6 +27,16 @@ st.sidebar.page_link("pages/data_visualization.py", label="Data Visualization")
 st.sidebar.page_link("pages/ai_evaluation_upload.py", label="AI-Tool")
 st.sidebar.button("Logout", use_container_width=True)
 
+# Map common truthy/falsy values to 1/0
+def to_binary(val):
+    v = str(val).strip().lower()
+    if v in ("1", "true", "yes", "y", "t"):
+        return 1
+    elif v in ("0", "false", "no", "n", "f"):
+        return 0
+    else:
+        return np.nan  # or 0, depending on how you want to handle junk
+
 # If Logout is clicked
 if st.session_state.get("logout", False):
     for key in list(st.session_state.keys()):
@@ -266,6 +276,96 @@ with col2:
             )
             
             st.plotly_chart(bar_fig, selection_mode="lasso", use_container_width=True)
+
+        if has_manual_label:
+
+            st.subheader("🔀 AI vs. Manual Flag Comparison")
+
+            st.markdown("<hr style='margin:1px 0;' />", unsafe_allow_html=True)
+
+            # Prepare comparison flags
+            df["manual_binary"] = df["binary_flag"].apply(to_binary).astype(int)
+
+            # Drop dataframe index
+            df = df.reset_index(drop=True)
+
+            # Subsets
+            both      = df[(df["ai_binary"] == 1) & (df["manual_binary"] == 1)]
+            ai_only   = df[(df["ai_binary"] == 1) & (df["manual_binary"] == 0)]
+            manual_only = df[(df["ai_binary"] == 0) & (df["manual_binary"] == 1)]
+
+            col1, middle, col2, col3 = st.columns([1.2, 0.3,2,2])
+
+            with col1:
+                st.markdown("######")
+                st.markdown("##### 📝 Labeling Summary")
+                total = len(both)
+                ai_tool = len(ai_only)
+                manual = len(manual_only)
+                with st.container(border=True):
+                    st.metric("🤝 Flagged by Both Methods", total)
+                    st.metric("🤖 Flagged by AI-Tool Only", ai_tool)
+                    st.metric("✋ Flagged Manually Only", manual)
+
+            with col2: 
+                # Proportions OF AI FLAGGED
+                comp_counts = pd.DataFrame({
+                    "Category": ["Both", "AI Only"],
+                    "Count":    [len(both), len(ai_only)]
+                })
+                comp_counts["Pct"] = comp_counts["Count"] / len(df) * 100
+
+                # Pie Chart
+                fig_comp = px.pie(
+                    comp_counts,
+                    names="Category",
+                    values="Count",
+                    title="🧠 Proportion of Listings Flagged by AI-Tool",
+                    hole=0.4
+                )
+                st.plotly_chart(fig_comp, use_container_width=True)
+
+            with col3:
+                # Proportions OF MANUALLY FLAGGED
+                comp_counts = pd.DataFrame({
+                    "Category": ["Both",  "Manual Only"],
+                    "Count":    [len(both), len(manual_only)]
+                })
+                comp_counts["Pct"] = comp_counts["Count"] / len(df) * 100
+
+                # Pie Chart
+                fig_comp = px.pie(
+                    comp_counts,
+                    names="Category",
+                    values="Count",
+                    title="✋ Proportion of Listings by Manual Label",
+                    hole=0.4,
+                    color="Category",
+                    color_discrete_map={
+                        "Manual Only": "red",
+                        "Both": "#FFCCCC"
+                    })
+                st.plotly_chart(fig_comp, use_container_width=True)
+
+            # Columns to show
+            show_cols = [
+                "listing_url", "price", "title", "location", "origin_city_list",
+                "model_name", "reasoning", "price_suspicion", "item_bulk", "item_new",
+                "listing_tone", "mentions_retailer", "overall_likelihood"
+            ]
+
+            # Tabs for detailed tables
+            tab_a, tab_b, tab_c = st.tabs(["📋 Both Flagged", "🧠 AI-Only Flagged", "✋ Manual-Only Flagged"])
+            with tab_a:
+                st.markdown(f"**Both flagged:** {len(both):,} listings")
+                st.dataframe(both[show_cols])
+            with tab_b:
+                st.markdown(f"**AI only flagged:** {len(ai_only):,} listings")
+                st.dataframe(ai_only[show_cols])
+            with tab_c:
+                st.markdown(f"**Manual only flagged:** {len(manual_only):,} listings")
+                st.dataframe(manual_only[show_cols])
+            # ---- end comparison section ----
 
     else:
         st.info("Please upload a CSV file to begin.")

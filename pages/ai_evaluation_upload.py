@@ -93,6 +93,8 @@ if result_exists:
     labeled_count = len(df_result)
     remaining = total_original - labeled_count
 
+    st.markdown(f"# Number of rows in output file: {labeled_count}")
+
 # -- ACTUAL PAGE CONTENT STARTS
 
 col1, col2, col3 = st.columns([0.2,3,0.2])
@@ -176,12 +178,25 @@ with col2:
                 save_path = os.path.join(base_path, new_csv.name)
                 with open(save_path, "wb") as f:
                     f.write(new_csv.read())
-                
-                st.success(f"✅ New CSV saved as `{new_csv.name}`")
+
+                name_csv = new_csv.name
+
+                # Clear the uploader’s session_state value
+                del st.session_state["csv"]
+
+                #  Reset any flags and rerun
+                st.session_state.model_success = False
+                st.session_state.new_csv = True
+                st.rerun()
+            
+            #if "new_csv" in st.session_state and st.session_state.new_csv == True:
+                # st.success(f"✅ New CSV saved as `{name_csv}`")
 
             # --- Validate CSV if uploaded ---
             if csv_exists:
                 try:
+                    # VALIDATE NAME: NO NAMES CONTAINING MODEL_RESULTS
+
                     df = pd.read_csv(csv_path)
                     required_cols = {"photo_url", "price", "title", "location", "origin_city_list"}
                     missing_cols = required_cols - set(df.columns)
@@ -212,6 +227,8 @@ with col2:
                 save_path = os.path.join(base_path, new_zip.name)
                 with open(save_path, "wb") as f:
                     f.write(new_zip.read())
+                
+                # st.rerun()
 
                 st.success(f"✅ New ZIP saved as `{new_zip.name}`")
 
@@ -229,6 +246,7 @@ with col2:
                             number_images = len(zip_ref.namelist()) - 1 # minus 1 is because the unzipped file is a nested folder, folder extracted_images > original zipped folder name > images as .png or .jpg 
                         st.success(f"✅ Extracted {number_images} images")
                         images_extracted = True
+                        # st.rerun()
                 except zipfile.BadZipFile:
                     st.error("🚫 Uploaded ZIP file is invalid.")
                     st.stop()
@@ -253,6 +271,9 @@ with col2:
                 missing = total - matched
 
                 st.info(f"📸 {matched}/{total} listings have matching images.")
+
+                # st.rerun()
+
                 if missing > 0:
                     with st.expander("⚠️ Listings missing images"):
                         st.dataframe(df[~df["image_exists"]][["photo_url", "image_filename"]])
@@ -321,16 +342,10 @@ with col2:
                     result_filename = f"{original_name}_model_results_{timestamp}.csv"
                     result_path = os.path.join(base_path, result_filename)
 
-                # Save empty CSV with only headers (this line is essential)
-                df_original.head(0).to_csv(result_path, index=False)
-
                 with st.spinner("Running model... this may take a few minutes ⏳"):
                     try:
-
-                        numb_rows_labeled = labeled_count if result_exists else 0
-
                         # Run your model
-                        run_model(csv_path, images_folder, result_path, numb_rows_labeled, max_to_process=max_to_process)
+                        run_model(csv_path, images_folder, result_path, max_to_process=max_to_process)
 
                         st.session_state.model_success = True
 

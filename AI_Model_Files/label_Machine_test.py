@@ -24,6 +24,15 @@ encoder = tiktoken.get_encoding(config.TOKENIZER_NAME)
 # Pre‑instantiate vision‑enabled models
 models = [genai.GenerativeModel(model_name=m) for m in config.VISION_MODELS]
 
+def has_correct_header(csv_path, expected_columns):
+    try:
+        df = pd.read_csv(csv_path, nrows=0)  # Only reads the header
+        current_columns = list(df.columns)
+        return current_columns == expected_columns
+    except Exception as e:
+        print(f"⚠️ Error reading file: {e}")
+        return False
+
 def build_prompt(title, category, price):
     """Fill in the prompt template from config."""
     return config.PROMPT_TEMPLATE.format(
@@ -49,11 +58,10 @@ def call_generate(model, img_bytes, prompt):
         ]
     )
 
-def run_model(input_csv: str, image_folder: str, output_path: str, rows_labeled: int, max_to_process: int = None):
+def run_model(input_csv: str, image_folder: str, output_path: str, max_to_process: int = None):
     config.INPUT_CSV = input_csv
     config.PHOTO_DIR = image_folder
     config.OUTPUT_CSV = output_path
-    config.ROWS_LABELED = rows_labeled
     config.MAX_TO_PROCESS = max_to_process
 
     print("Function main being called")
@@ -61,170 +69,159 @@ def run_model(input_csv: str, image_folder: str, output_path: str, rows_labeled:
     
     print("Run Model completed successfully!")
 
-
 def main():
-
-    print("Function main called")
+    print("Function main called and starting")
 
     output_filename = config.OUTPUT_CSV
-
+    input_filename = config.INPUT_CSV
     print("Reading from:", output_filename)
 
-    # --- Step 1: Determine how many rows already exist ---
-    rows_labeled = config.ROWS_LABELED
+    # Load input CSV
+    df_input = pd.read_csv(input_filename)
 
-    # --- Step 2: Process input and append to output ---
-    with open(config.INPUT_CSV, newline='', encoding='utf-8') as inf, \
-         open(output_filename, 'a', newline='', encoding='utf-8') as outf:
+    # Checks if CSV output exists
+    file_exists = os.path.exists(output_filename)
 
-        reader = csv.DictReader(inf)
-        for _ in range(rows_labeled):
-            next(reader, None)
-        
-        print(f"🔁 Skipping {rows_labeled} already-labeled rows.")
+    # Header with all columns (input + extras)
+    all_columns = list(df_input.columns) + [
+    'model_name', 'reasoning', 'price_suspicion', 'item_bulk', 'item_new',
+    'listing_tone', 'mentions_retailer', 'overall_likelihood', 'stolen',
+    'timestamp', 'prompt_tokens', 'completion_tokens', 'total_tokens']
 
-        processed = 0
+    # Check if header is correct, otherwise recreate it
+    if not file_exists or not has_correct_header(output_filename, all_columns):
+        # Ensure output CSV has correct header if it doesn't exist or the header is incorrect
+        print("🛠 Building output file with correct header.")
+        pd.DataFrame(columns=all_columns).to_csv(output_filename, index=False)
 
-        fieldnames = reader.fieldnames + [
-            'model_name',
-            'reasoning',
-            'price_suspicion',
-            'item_bulk',
-            'item_new',
-            'listing_tone',
-            'mentions_retailer',
-            'overall_likelihood',
-            'stolen',
-            'timestamp',
-            'prompt_tokens',
-            'completion_tokens',
-            'total_tokens'
-        ]
+    # Load output CSVs
+    df_output = pd.read_csv(output_filename)
 
-        print("Appending to:", output_filename)
+    # Use listing_url to avoid reprocessing
+    processed_ids = set(df_output['listing_url']) if not df_output.empty else set()
+    df_to_process = df_input[~df_input['listing_url'].isin(processed_ids)].copy()
 
-        writer = csv.DictWriter(outf, fieldnames=fieldnames)
+    print(f"🔁 Skipping {len(processed_ids)} already-labeled rows. {len(df_to_process)} remaining.")
 
-        executor = ThreadPoolExecutor(max_workers=1)
+    processed_rows = 0
+    executor = ThreadPoolExecutor(max_workers=1)
 
-        for row in reader:
-            # stop if we've hit the user‑defined limit
-            if config.MAX_TO_PROCESS is not None and processed >= config.MAX_TO_PROCESS:
+    for idx, row in df_to_process.iterrows():
+        if config.MAX_TO_PROCESS is not None and processed_rows >= config.MAX_TO_PROCESS:
+            break
+
+        title     = row.get('title', '').strip()
+        category  = row.get('category', '').strip()
+        price     = str(row.get('price', '')).strip()
+        photo_url = row.get('photo_url', '').strip()
+
+        basename = os.path.basename(photo_url)
+        search_pattern = os.path.join(config.PHOTO_DIR, '**', basename)
+        matches = glob.glob(search_pattern, recursive=True)
+
+        if not matches:
+            print(f"[{processed_rows+1}] ⚠️  Skipping—no file for {basename}")
+            continue
+
+        img_path = matches[0]  # Use the first match found
+        idx = processed_rows % len(models)
+        model = models[idx]
+        model_name = config.VISION_MODELS[idx]
+        prompt = build_prompt(title, category, price)
+        prompt_tokens = len(encoder.encode(prompt))
+
+        # Compute which key index will be used next
+        upcoming_key_idx = api_key_index % num_keys
+
+        # LOGGING: include API‑key index
+        print(
+            f"[{processed_rows+1}] → Using {model_name} "
+            f"(prompt tokens: {prompt_tokens}) "
+            f"[API key index: {upcoming_key_idx}]"
+        )
+
+        with open(img_path, 'rb') as f:
+            img_bytes = f.read()
+
+        # API call with timeout retry
+        resp = None
+        for attempt in range(3):
+            future = executor.submit(call_generate, model, img_bytes, prompt)
+            try:
+                resp = future.result(timeout=120)
+                break
+            except TimeoutError:
+                backoff = 2 ** attempt
+                print(f"    ⏱ Timeout {attempt+1}, retrying in {backoff}s…")
+                time.sleep(backoff)
+            except Exception as e:
+                print(f"    ❌ API error attempt {attempt+1}: {e}")
                 break
 
-            title     = row.get('title','').strip()
-            category  = row.get('category','').strip()
-            price     = row.get('price','').strip()
-            photo_url = row.get('photo_url','').strip()
+        if not resp:
+            print("    ❌ All retries failed; skipping this listing.")
+            continue
 
-            basename = os.path.basename(photo_url)
-            search_pattern = os.path.join(config.PHOTO_DIR, '**', basename)
-            matches = glob.glob(search_pattern, recursive=True)
+        output = resp.text.strip()
+        completion_tokens = len(encoder.encode(output))
+        total_tokens = prompt_tokens + completion_tokens
+        print(f"    ✔ Completed. completion: {completion_tokens}, total: {total_tokens}")
+        print(f"    ➤ {output.splitlines()[0]}")
 
-            if not matches:
-                print(f"[{processed+1}] ⚠️  Skipping—no file for {basename}")
-                continue
+        # Parse LLM response
+        extras = {
+            'model_name': model_name,
+            'reasoning': "N/A",
+            'price_suspicion': "N/A",
+            'item_bulk': "N/A",
+            'item_new': "N/A",
+            'listing_tone': "N/A",
+            'mentions_retailer': "N/A",
+            'overall_likelihood': "N/A",
+            'stolen': "N/A",
+            'timestamp': time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            'prompt_tokens': prompt_tokens,
+            'completion_tokens': completion_tokens,
+            'total_tokens': total_tokens
+        }
 
-            img_path = matches[0]  # Use the first match found
-            idx        = processed % len(models)
-            model      = models[idx]
-            model_name = config.VISION_MODELS[idx]
-            prompt = build_prompt(title, category, price)
-            prompt_tokens = len(encoder.encode(prompt))
+        for line in output.splitlines():
+            low = line.lower()
+            if low.startswith("reasoning"):
+                extras['reasoning'] = line.split(":", 1)[1].strip()
+            elif low.startswith("price raises suspicion"):
+                extras['price_suspicion'] = line.split(":", 1)[1].strip()
+            elif low.startswith("item is bulk"):
+                extras['item_bulk'] = line.split(":", 1)[1].strip()
+            elif low.startswith("item is new"):
+                extras['item_new'] = line.split(":", 1)[1].strip()
+            elif low.startswith("listing tone"):
+                extras['listing_tone'] = line.split(":", 1)[1].strip()
+            elif low.startswith("mentions retailer"):
+                extras['mentions_retailer'] = line.split(":", 1)[1].strip()
+            elif low.startswith("overall likelihood shoplifted"):
+                extras['overall_likelihood'] = line.split(":", 1)[1].strip()
+            elif low.startswith("stolen"):
+                extras['stolen'] = line.split(":", 1)[1].strip()
+            elif low.startswith("timestamp"):
+                extras['timestamp'] = line.split(":", 1)[1].strip()
 
-            # Compute which key index will be used next
-            upcoming_key_idx = api_key_index % num_keys
+        if extras['overall_likelihood'].isdigit():
+            extras['stolen'] = 'yes' if int(extras['overall_likelihood']) >= 7 else 'no'
 
-            # LOGGING: include API‑key index
-            print(
-                f"[{processed+1}] → Using {model_name} "
-                f"(prompt tokens: {prompt_tokens}) "
-                f"[API key index: {upcoming_key_idx}]"
-            )
+        # Merge row data with model output
+        full_row = row.to_dict()
+        full_row.update(extras)
 
-            with open(img_path, 'rb') as f:
-                img_bytes = f.read()
+        # Append single row to CSV
+        pd.DataFrame([full_row]).to_csv(output_filename, mode='a', index=False, header=False)
+        processed_rows += 1
 
-            # retry with executor‑enforced timeout
-            resp = None
-            for attempt in range(3):
-                future = executor.submit(call_generate, model, img_bytes, prompt)
-                try:
-                    resp = future.result(timeout=120)
-                    break
-                except TimeoutError:
-                    backoff = 2 ** attempt
-                    print(f"    ⏱ Attempt {attempt+1} timed out, retrying in {backoff}s…")
-                    time.sleep(backoff)
-                except Exception as e:
-                    print(f"    ❌ API error on attempt {attempt+1}: {e}")
-                    break
+        time.sleep(config.DELAY_SECONDS)
 
-            if not resp:
-                print("    ❌ All retries failed; skipping this listing.")
-                continue
+    executor.shutdown()
 
-            output = resp.text.strip()
-            completion_tokens = len(encoder.encode(output))
-            total_tokens      = prompt_tokens + completion_tokens
-            print(f"    ✔ Completed. completion: {completion_tokens}, total: {total_tokens}")
-            print(f"    ➤ {output.splitlines()[0]}")
-            print(f"Delay = {config.DELAY_SECONDS}")
-
-            # parse the response
-            reasoning = price_suspicion = item_bulk = item_new = listing_tone = mentions_retailer = overall_likelihood = stolen = timestamp = "N/A"
-            for line in output.splitlines():
-                low = line.lower()
-                if low.startswith("reasoning"):
-                    reasoning = line.split(":",1)[1].strip()
-                elif low.startswith("price raises suspicion"):
-                    price_suspicion = line.split(":",1)[1].strip()
-                elif low.startswith("item is bulk"):
-                    item_bulk = line.split(":",1)[1].strip()
-                elif low.startswith("item is new"):
-                    item_new = line.split(":",1)[1].strip()
-                elif low.startswith("listing tone"):
-                    listing_tone = line.split(":",1)[1].strip()
-                elif low.startswith("mentions retailer"):
-                    mentions_retailer = line.split(":",1)[1].strip()
-                elif low.startswith("overall likelihood shoplifted"):
-                    overall_likelihood = line.split(":",1)[1].strip()
-                elif low.startswith("stolen"):
-                    stolen = line.split(":",1)[1].strip()
-                elif low.startswith("timestamp"):
-                    timestamp = line.split(":",1)[1].strip()
-
-            # default stolen & timestamp if not provided
-            try:
-                if overall_likelihood.isdigit():
-                    stolen = 'yes' if int(overall_likelihood) >= 7 else 'no'
-                timestamp = timestamp if timestamp != "N/A" else time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-            except:
-                pass
-
-            row.update({
-                'model_name':         model_name,
-                'reasoning':          reasoning,
-                'price_suspicion':    price_suspicion,
-                'item_bulk':          item_bulk,
-                'item_new':           item_new,
-                'listing_tone':       listing_tone,
-                'mentions_retailer':  mentions_retailer,
-                'overall_likelihood': overall_likelihood,
-                'stolen':             stolen,
-                'timestamp':          timestamp,
-                'prompt_tokens':      prompt_tokens,
-                'completion_tokens':  completion_tokens,
-                'total_tokens':       total_tokens
-            })
-            writer.writerow(row)
-
-            processed += 1
-            time.sleep(config.DELAY_SECONDS)
-
-        executor.shutdown()
-
-    print(f"\n✅ Done! Processed {processed} listings. Output → {output_filename}")
+    print(f"\n✅ Done! Processed {processed_rows} listings. Output → {output_filename}")
 
 if __name__ == "__main__":
     main()

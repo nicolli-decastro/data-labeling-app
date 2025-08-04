@@ -230,7 +230,7 @@ for row_df in rows:
 
             # Create the border status for each listing co
             if st.session_state.batch_labels[uid] == True:
-                border_style = "8px solid steelblue"
+                border_style = "8px solid red"
             else:
                 border_style = "4px solid white"
 
