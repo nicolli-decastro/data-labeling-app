@@ -40,16 +40,18 @@ if logout_clicked:
 def to_binary(val):
     # 1) Treat NaN or infinite as missing
     if pd.isna(val) or (isinstance(val, (int, float)) and not np.isfinite(val)):
-        return np.nan
+        # if value is Nan return 0
+        if pd.isna(val):
+            return 0 # np.nan
+        else:
+            # Normalize to lowercase string
+            v = str(val).strip().lower()
 
-    # 2) Normalize to lowercase string
-    v = str(val).strip().lower()
-
-    # 3) Map truthy/falsy
-    if v in ("1", "true", "yes", "y", "t"):
-        return 1
-    elif v in ("0", "false", "no", "n", "f"):
-        return 0
+            # Map truthy/falsy
+            if v in ("1", "true", "yes", "y", "t"):
+                return 1
+            elif v in ("0", "false", "no", "n", "f"):
+                return 0
 
     # 4) Anything else is junk/missing
     return np.nan
