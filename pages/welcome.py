@@ -67,7 +67,7 @@ with col2:
             if st.button("Go to Labeling Page"):
                 st.switch_page("pages/database_label.py")
 
-    with col2:
+    with col3:
         with st.container(border=True):
             st.subheader("📊 Data Visualization")
             st.markdown(
@@ -80,7 +80,7 @@ with col2:
             if st.button("Go to Visualization Page"):
                 st.switch_page("pages/data_visualization.py")
 
-    with col3:
+    with col2:
         with st.container(border=True):
             st.subheader("🤖 AI Evaluation Tool")
 
