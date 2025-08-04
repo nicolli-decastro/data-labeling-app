@@ -68,7 +68,6 @@ result_file = [
 csv_exists = len(csv_files) > 0
 zip_exists = len(zip_files) > 0
 result_exists = len(result_file) > 0
-st.markdown(f"Number of csv: {len(csv_files)}, # zipped files: {len(zip_files)}, # result files: {len(result_file)}")
 
 # -- FIND FILE PATHS
 csv_path = os.path.join(base_path, csv_files[0]) if csv_exists else None
@@ -79,7 +78,6 @@ result_path = os.path.join(base_path, result_file[0]) if result_exists else None
 csv_filename = os.path.basename(csv_path) if csv_exists else None
 zip_filename = os.path.basename(zip_path) if zip_exists else None
 result_filename = os.path.basename(result_path) if result_exists else None
-st.markdown(f"### result csv path: {result_path}, result filename: {result_filename}")
 
 if csv_exists:
     # Step 1: Load the original CSV
@@ -92,8 +90,6 @@ if result_exists:
     df_result = pd.read_csv(result_path)
     labeled_count = len(df_result)
     remaining = total_original - labeled_count
-
-    st.markdown(f"# Number of rows in output file: {labeled_count}")
 
 # -- ACTUAL PAGE CONTENT STARTS
 
