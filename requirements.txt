@@ -10,4 +10,3 @@ geopy
 tiktoken
 google-generativeai
 numpy
-shutil
