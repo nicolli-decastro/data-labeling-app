@@ -9,4 +9,5 @@ plotly>=5.0
 geopy
 tiktoken
 google-generativeai
-geopy
+numpy
+shutil

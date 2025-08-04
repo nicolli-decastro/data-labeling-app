@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import zipfile
 import os
+import shutil
 
 # -- SIDE BAR CONFIGURATION
 
@@ -26,13 +27,14 @@ st.sidebar.page_link("pages/welcome.py", label="Home Page")
 st.sidebar.page_link("pages/database_label.py", label="Data for Label")
 st.sidebar.page_link("pages/data_visualization.py", label="Data Visualization")
 st.sidebar.page_link("pages/ai_evaluation_upload.py", label="AI-Tool")
-st.sidebar.button("Logout", use_container_width=True)
+# Capture the button click
+logout_clicked = st.sidebar.button("Logout", use_container_width=True)
 
-# If Logout is clicked
-if st.session_state.get("logout", False):
+# If it was clicked, clear session_state and rerun
+if logout_clicked:
+    # remove everything
     for key in list(st.session_state.keys()):
         del st.session_state[key]
-    st.rerun()
 
 # --- Check user session ---
 
@@ -177,16 +179,19 @@ with col2:
 
                 name_csv = new_csv.name
 
-                # Clear the uploader’s session_state value
-                del st.session_state["csv"]
-
                 #  Reset any flags and rerun
                 st.session_state.model_success = False
-                st.session_state.new_csv = True
+                st.session_state.new_csv_file = True
+
+                # Clear the uploader’s session_state value
+                del st.session_state["csv"]
                 st.rerun()
             
-            #if "new_csv" in st.session_state and st.session_state.new_csv == True:
+            # Re-run session if new csv was uploaded
+            if "new_csv_file" in st.session_state and st.session_state.new_csv_file == True:
                 # st.success(f"✅ New CSV saved as `{name_csv}`")
+                st.session_state.new_csv_file = False
+                st.rerun()
 
             # --- Validate CSV if uploaded ---
             if csv_exists:
@@ -219,14 +224,30 @@ with col2:
                 for f in existing_zips:
                     os.remove(f)
 
+                # Deleting the extracted_images folder in case it exists
+                folder_path = os.path.join(base_path, "extracted_images")
+                if os.path.isdir(folder_path):
+                    try:
+                        shutil.rmtree(folder_path)
+                        print(f"✅ Deleted folder: {folder_path}")
+                    except Exception as e:
+                        print(f"❌ Could not delete {folder_path}: {e}")
+
                 # Save new ZIP
                 save_path = os.path.join(base_path, new_zip.name)
                 with open(save_path, "wb") as f:
                     f.write(new_zip.read())
-                
-                # st.rerun()
 
-                st.success(f"✅ New ZIP saved as `{new_zip.name}`")
+                #  Reset any flags and rerun
+                st.session_state.model_success = False
+                st.session_state.new_zip_file = True
+
+                del st.session_state["zip"]
+                            
+            # Re-run session if new zip was uploaded
+            if "new_zip_file" in st.session_state and st.session_state.new_zip_file == True:
+                st.session_state.new_zip_file = False
+                st.rerun()
 
             # Define extracted image folder
             images_folder = os.path.join(base_path, "extracted_images")
@@ -293,6 +314,8 @@ with col2:
 
         st.markdown("## 🤖 Ready to Run AI Model")
         st.success("All inputs are validated. You can now run the AI model to evaluate the listings.")
+
+        st.info(f"📸 {matched}/{total} listings have matching images. You can only process listings with image.")
 
         st.markdown("#### 🔢 Select Number of Listings to Analyze")
 

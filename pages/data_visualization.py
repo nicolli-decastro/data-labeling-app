@@ -25,17 +25,34 @@ st.sidebar.page_link("pages/welcome.py", label="Home Page")
 st.sidebar.page_link("pages/database_label.py", label="Data for Label")
 st.sidebar.page_link("pages/data_visualization.py", label="Data Visualization")
 st.sidebar.page_link("pages/ai_evaluation_upload.py", label="AI-Tool")
-st.sidebar.button("Logout", use_container_width=True)
+# Capture the button click
+logout_clicked = st.sidebar.button("Logout", use_container_width=True)
+
+# If it was clicked, clear session_state and rerun
+if logout_clicked:
+    # remove everything
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+
+# -- START OF PAGE HERE
 
 # Map common truthy/falsy values to 1/0
 def to_binary(val):
+    # 1) Treat NaN or infinite as missing
+    if pd.isna(val) or (isinstance(val, (int, float)) and not np.isfinite(val)):
+        return np.nan
+
+    # 2) Normalize to lowercase string
     v = str(val).strip().lower()
+
+    # 3) Map truthy/falsy
     if v in ("1", "true", "yes", "y", "t"):
         return 1
     elif v in ("0", "false", "no", "n", "f"):
         return 0
-    else:
-        return np.nan  # or 0, depending on how you want to handle junk
+
+    # 4) Anything else is junk/missing
+    return np.nan
 
 # If Logout is clicked
 if st.session_state.get("logout", False):
@@ -284,7 +301,7 @@ with col2:
             st.markdown("<hr style='margin:1px 0;' />", unsafe_allow_html=True)
 
             # Prepare comparison flags
-            df["manual_binary"] = df["binary_flag"].apply(to_binary).astype(int)
+            df["manual_binary"] = df["binary_flag"].apply(to_binary)
 
             # Drop dataframe index
             df = df.reset_index(drop=True)

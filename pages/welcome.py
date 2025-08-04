@@ -25,13 +25,16 @@ st.sidebar.page_link("pages/welcome.py", label="Home Page")
 st.sidebar.page_link("pages/database_label.py", label="Data for Label")
 st.sidebar.page_link("pages/data_visualization.py", label="Data Visualization")
 st.sidebar.page_link("pages/ai_evaluation_upload.py", label="AI-Tool")
-st.sidebar.button("Logout", use_container_width=True)
+# Capture the button click
+logout_clicked = st.sidebar.button("Logout", use_container_width=True)
 
-# If Logout is clicked
-if st.session_state.get("logout", False):
+# If it was clicked, clear session_state and rerun
+if logout_clicked:
+    # remove everything
     for key in list(st.session_state.keys()):
         del st.session_state[key]
-    st.rerun()
+
+# -- PAGE STARTS
 
 col1, col2, col3 = st.columns([0.5,4,0.5])
 
